@@ -134,7 +134,7 @@ h2 {
 }
 
 h3 {
-  margin-top: 25px;
+  margin-top: 15px;
   margin-bottom: 15px;
   font-size: 1.5rem;
   font-weight: 700;
@@ -150,6 +150,19 @@ p {
 a {
   color: var(--darkgrey);
   text-decoration: underline;
+}
+
+ul {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-left: 40px;
+}
+
+ol {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-left: 40px;
+  font-size: 1.125rem;
 }
 
 strong {
@@ -313,6 +326,11 @@ strong {
 .section.hero {
   padding-top: var(--l-tablet);
   padding-bottom: var(--l-tablet);
+}
+
+.section.blog {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
 }
 
 .hero-hedline-line-wrapper {
@@ -648,6 +666,10 @@ strong {
   position: relative;
 }
 
+.section-footer.background-cream:where(.w-variant-9ffe0702-0923-d2d4-1f1e-33dc1bae7aff) {
+  background-color: var(--white);
+}
+
 .margin-top-30 {
   margin-top: 30px;
 }
@@ -930,6 +952,18 @@ strong {
   line-height: 1;
 }
 
+.h1-small.margin-bottom-2-5.centered {
+  text-align: center;
+}
+
+.h1-small.blog {
+  margin-right: auto;
+  margin-bottom: var(--m);
+  text-align: center;
+  width: 75%;
+  margin-left: auto;
+}
+
 .wrapper-brand {
   text-align: right;
   margin-top: -3rem;
@@ -1002,7 +1036,7 @@ strong {
 }
 
 .text-link {
-  color: #ea5d12;
+  color: var(--red);
   margin-bottom: 0;
   font-size: 1.125rem;
   line-height: 1.1;
@@ -1165,6 +1199,26 @@ strong {
   inset: 0% 0% auto auto;
 }
 
+.grid-blog {
+  margin-top: var(--m-tablet);
+  grid-template-rows: auto;
+  grid-template-columns: repeat(auto-fit, minmax(30%, 1fr));
+}
+
+.container-content-blog {
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.image-blog {
+  margin-top: var(--m);
+  object-fit: cover;
+  width: 100vw;
+  height: 520px;
+  margin-bottom: 5rem;
+}
+
 @media screen and (max-width: 991px) {
   body {
     line-height: 1.45;
@@ -1184,7 +1238,7 @@ strong {
     font-size: 1.375rem;
   }
 
-  p {
+  p, ol {
     font-size: 1rem;
   }
 
@@ -1447,6 +1501,10 @@ strong {
     font-size: 3.8rem;
   }
 
+  .h1-small.blog {
+    width: 100%;
+  }
+
   .wrapper-brand {
     margin-top: -5rem;
   }
@@ -1507,9 +1565,9 @@ strong {
   }
 
   .icon-start-flow-2 {
-    width: 260px;
-    margin-bottom: 265px;
-    margin-right: 60px;
+    width: 160px;
+    margin-top: 138px;
+    margin-right: 119px;
   }
 
   .icon-start-flow-2._3 {
@@ -1521,6 +1579,14 @@ strong {
     width: 200px;
     margin-top: 88px;
     margin-right: 198px;
+  }
+
+  .container-content-blog {
+    max-width: 100%;
+  }
+
+  .image-blog {
+    height: 440px;
   }
 }
 
@@ -1542,6 +1608,15 @@ strong {
   p {
     font-size: .938rem;
     line-height: 1.35;
+  }
+
+  ul {
+    margin-bottom: 15px;
+  }
+
+  ol {
+    margin-bottom: 15px;
+    font-size: .938rem;
   }
 
   .section-start {
@@ -1774,6 +1849,10 @@ strong {
     font-size: 2.7rem;
   }
 
+  .h1-small.blog {
+    margin-bottom: var(--m-tablet);
+  }
+
   .wrapper-brand {
     margin-bottom: .5rem;
   }
@@ -1821,8 +1900,9 @@ strong {
   }
 
   .icon-start-flow-2 {
-    width: 200px;
-    margin-bottom: 193px;
+    width: 150px;
+    margin-top: 68px;
+    margin-right: 50px;
   }
 
   .icon-start-flow-2._3 {
@@ -1834,6 +1914,12 @@ strong {
     width: 140px;
     margin-top: 62px;
     margin-right: 150px;
+  }
+
+  .image-blog {
+    margin-top: var(--m-tablet);
+    margin-bottom: var(--m-tablet);
+    height: 280px;
   }
 }
 
@@ -1849,6 +1935,10 @@ strong {
 
   h3 {
     margin-top: 15px;
+  }
+
+  ul, ol {
+    padding-left: 15px;
   }
 
   .section-start {
@@ -2028,6 +2118,11 @@ strong {
     margin-top: 0;
   }
 
+  .flex:where(.w-variant-9ffe0702-0923-d2d4-1f1e-33dc1bae7aff) {
+    flex-flow: column;
+    width: 100%;
+  }
+
   .wrapper-footer-links {
     margin-top: 20px;
     margin-bottom: 20px;
@@ -2102,6 +2197,10 @@ strong {
     font-size: 1.8rem;
   }
 
+  .h1-small.blog {
+    margin-bottom: var(--m-mobile);
+  }
+
   .logo-quote {
     height: 35px;
     margin-top: 10px;
@@ -2142,9 +2241,9 @@ strong {
   }
 
   .icon-start-flow-2 {
-    width: 120px;
-    margin-bottom: 380px;
-    margin-right: 38px;
+    width: 100px;
+    margin-top: 44px;
+    margin-right: auto;
   }
 
   .icon-start-flow-2._3 {
@@ -2156,6 +2255,12 @@ strong {
     width: 120px;
     margin-top: 39px;
     margin-right: 79px;
+  }
+
+  .image-blog {
+    margin-top: var(--m-mobile);
+    margin-bottom: var(--m-mobile);
+    height: 240px;
   }
 }
 
