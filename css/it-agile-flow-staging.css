@@ -1988,7 +1988,7 @@ strong {
   }
 
   .image-offer-2 {
-    height: 150px;
+    height: 200px;
   }
 
   .section-2 {
@@ -2024,6 +2024,11 @@ strong {
     width: 140px;
     margin-top: 62px;
     margin-right: 150px;
+  }
+
+  .grid-blog {
+    margin-top: var(--m-mobile);
+    grid-template-columns: repeat(auto-fit, minmax(100%, 1fr));
   }
 
   .image-blog {
@@ -2332,6 +2337,10 @@ strong {
     line-height: 1.3;
   }
 
+  .image-offer-2 {
+    height: 160px;
+  }
+
   .section-2 {
     padding: 1.563rem 1.563rem 2.5rem;
   }
@@ -2364,6 +2373,10 @@ strong {
     width: 120px;
     margin-top: 39px;
     margin-right: 79px;
+  }
+
+  .grid-blog {
+    margin-top: var(--xs);
   }
 
   .image-blog {
