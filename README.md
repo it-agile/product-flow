@@ -1,3 +1,6 @@
+# Landingpage it-team-flow.de
+In diesem Projekt findet sich die Landing-Page für it-team-flow.de.
+
 # HUGO als Static Site Generator
 Die Webseite benutzt HUGO als Static Site Generator. HUGO generiert die Webseite ins public-Verzeichnis.
 
