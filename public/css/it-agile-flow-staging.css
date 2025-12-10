@@ -43,7 +43,7 @@
   --m-tablet: 2.5rem;
   --m: 3.75rem;
   --m-mobile: 1.563rem;
-  --red: #fa3232;
+  --red: #eb5d12;
   --cream: #ebebdf;
   --l: 8.75rem;
   --l-tablet: 6.25rem;
@@ -218,7 +218,8 @@ strong {
   transition: transform .3s;
 }
 
-.brand:hover, .brand.margin-top-20.w--current:hover {
+.brand:hover,
+.brand.margin-top-20.w--current:hover {
   transform: scale(1.05);
 }
 
@@ -687,7 +688,8 @@ strong {
   font-size: 1.125rem;
 }
 
-.text-field:focus-visible, .text-field[data-wf-focus-visible] {
+.text-field:focus-visible,
+.text-field[data-wf-focus-visible] {
   border: 1px solid var(--red);
   box-shadow: 0 0 10px #fa323266;
 }
@@ -1018,11 +1020,13 @@ strong {
   display: block;
 }
 
-.link-footer-2:hover, .link-footer-2.w--current {
+.link-footer-2:hover,
+.link-footer-2.w--current {
   color: #ea5d12;
 }
 
-.container-content-3, .container-content-4 {
+.container-content-3,
+.container-content-4 {
   max-width: 1400px;
   margin-left: auto;
   margin-right: auto;
@@ -1272,7 +1276,8 @@ strong {
     font-size: 1.375rem;
   }
 
-  p, ol {
+  p,
+  ol {
     font-size: 1rem;
   }
 
@@ -1730,7 +1735,8 @@ strong {
     height: 82%;
   }
 
-  .logo, .logo._2 {
+  .logo,
+  .logo._2 {
     width: 100px;
   }
 
@@ -1763,7 +1769,9 @@ strong {
     font-size: 1rem;
   }
 
-  .intro.limit, .intro.centered.limit, .intro.limit-2 {
+  .intro.limit,
+  .intro.centered.limit,
+  .intro.limit-2 {
     width: 100%;
   }
 
@@ -1900,7 +1908,8 @@ strong {
     height: 65px;
   }
 
-  .progress-bar-wrapper, .progress-bar {
+  .progress-bar-wrapper,
+  .progress-bar {
     width: 3px;
   }
 
@@ -2052,7 +2061,8 @@ strong {
     margin-top: 15px;
   }
 
-  ul, ol {
+  ul,
+  ol {
     padding-left: 15px;
   }
 
@@ -2175,7 +2185,8 @@ strong {
     height: 180px;
   }
 
-  .grid-2.center.inverse, .grid-2.center.margin-top-60.margin-bottom-2-5 {
+  .grid-2.center.inverse,
+  .grid-2.center.margin-top-60.margin-bottom-2-5 {
     grid-row-gap: 20px;
   }
 
@@ -2243,7 +2254,8 @@ strong {
     margin-right: 0;
   }
 
-  .wrapper-padding, .wrapper-padding.sticky {
+  .wrapper-padding,
+  .wrapper-padding.sticky {
     padding-right: 0;
   }
 
@@ -2413,11 +2425,19 @@ strong {
   }
 }
 
-#w-node-bea038dc-6824-aad0-c508-e0ce49e93be1-81d9945e, #w-node-bf91ea54-0196-3c06-d055-6af6d4f1c417-81d9945e, #w-node-_47f8253c-6634-7ba3-24b3-72d34095eca3-81d9945e, #w-node-edabb2e4-dd4c-77dc-4840-d01a82e904fa-81d9945e {
+#w-node-bea038dc-6824-aad0-c508-e0ce49e93be1-81d9945e,
+#w-node-bf91ea54-0196-3c06-d055-6af6d4f1c417-81d9945e,
+#w-node-_47f8253c-6634-7ba3-24b3-72d34095eca3-81d9945e,
+#w-node-edabb2e4-dd4c-77dc-4840-d01a82e904fa-81d9945e {
   grid-area: span 1 / span 1 / span 1 / span 1;
 }
 
-#w-node-_5b7393a0-01c4-bf8f-55c7-f94600e63c74-81d9945e, #w-node-fb2a5f29-2acf-468b-71ed-8256cf33ce9f-81d9945e, #w-node-a9dcfa54-cfe1-65d7-77b4-877669272c02-81d9945e, #w-node-b1b35344-9a1d-15c0-a77b-e7c5a5d947b7-81d9945e, #w-node-b1b35344-9a1d-15c0-a77b-e7c5a5d947bf-81d9945e, #w-node-b1b35344-9a1d-15c0-a77b-e7c5a5d947c7-81d9945e {
+#w-node-_5b7393a0-01c4-bf8f-55c7-f94600e63c74-81d9945e,
+#w-node-fb2a5f29-2acf-468b-71ed-8256cf33ce9f-81d9945e,
+#w-node-a9dcfa54-cfe1-65d7-77b4-877669272c02-81d9945e,
+#w-node-b1b35344-9a1d-15c0-a77b-e7c5a5d947b7-81d9945e,
+#w-node-b1b35344-9a1d-15c0-a77b-e7c5a5d947bf-81d9945e,
+#w-node-b1b35344-9a1d-15c0-a77b-e7c5a5d947c7-81d9945e {
   justify-self: center;
 }
 
@@ -2425,7 +2445,8 @@ strong {
   grid-area: span 1 / span 1 / span 1 / span 1;
 }
 
-#w-node-a907e6d1-710f-a5d4-f48d-b4e281bb8b06-81d9945e, #w-node-a907e6d1-710f-a5d4-f48d-b4e281bb8b12-81d9945e {
+#w-node-a907e6d1-710f-a5d4-f48d-b4e281bb8b06-81d9945e,
+#w-node-a907e6d1-710f-a5d4-f48d-b4e281bb8b12-81d9945e {
   justify-self: center;
 }
 
@@ -2445,6 +2466,7 @@ strong {
   font-style: normal;
   font-display: swap;
 }
+
 @font-face {
   font-family: 'Notosans';
   src: url('../fonts/NotoSans-ExtraBold.ttf') format('truetype');
@@ -2452,6 +2474,7 @@ strong {
   font-style: normal;
   font-display: swap;
 }
+
 @font-face {
   font-family: 'Notosans';
   src: url('../fonts/NotoSans-Bold.ttf') format('truetype');
@@ -2459,6 +2482,7 @@ strong {
   font-style: normal;
   font-display: swap;
 }
+
 @font-face {
   font-family: 'Sourcesans 3';
   src: url('../fonts/SourceSans3-Bold.ttf') format('truetype');
@@ -2466,6 +2490,7 @@ strong {
   font-style: normal;
   font-display: swap;
 }
+
 @font-face {
   font-family: 'Sourcesans 3';
   src: url('../fonts/SourceSans3-Regular.ttf') format('truetype');
