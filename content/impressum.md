@@ -1,5 +1,7 @@
 ---
 title: "Impressum"
+layout: impressum
+url: impressum.html
 ---
 **it-agile GmbH**<br>
 Willy-Brandt-Straße 1<br>
