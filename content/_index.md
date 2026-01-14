@@ -14,5 +14,5 @@ params:
   versprechen2b: Time-to-Market
   versprechen3a: Synchronisierte,
   versprechen3b: lieferfähige Teams
-  webinar: https://us02web.zoom.us/webinar/register/WN_2DcCx0xtQ568UxNLkbGx1A#/registration
+  webinar: https://us02web.zoom.us/webinar/register/WN_N_4awQcYTfu5N10W7sXCcw
 ---
