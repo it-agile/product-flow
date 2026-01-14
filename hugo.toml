@@ -6,3 +6,6 @@ title = 'it-team-flow'
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+
+[params]
+  webinar_url = "https://us02web.zoom.us/webinar/register/WN_N_4awQcYTfu5N10W7sXCcw"

@@ -14,7 +14,7 @@ params:
   versprechen2b: "Time-to-Market"
   versprechen3a: "Synchronisierte,"
   versprechen3b: "lieferfähige Teams"
-  webinar: "https://us02web.zoom.us/webinar/register/WN_N_4awQcYTfu5N10W7sXCcw"
+
   
   # Reality Section
   reality_headline_highlight: "Die Realität in vielen IT-Organisationen und IT-Abteilungen:"
