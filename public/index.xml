@@ -6,8 +6,15 @@
     <description>Recent content in Viele Teams, kein Flow on it-team-flow</description>
     <generator>Hugo</generator>
     <language>de-de</language>
-    <lastBuildDate>Mon, 01 Jan 0001 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 14 Jan 2024 12:00:00 +0100</lastBuildDate>
     <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>User-Story-Simulation: Flow und Varianz</title>
+      <link>http://localhost:1313/blog/streichholz-simulation/</link>
+      <pubDate>Sun, 14 Jan 2024 12:00:00 +0100</pubDate>
+      <guid>http://localhost:1313/blog/streichholz-simulation/</guid>
+      <description>&lt;div class=&#34;container-content-blog&#34;&gt;&#xA;&lt;p class=&#34;intro centered&#34;&gt;Stellen Sie sich vor, Sie haben eine Lieferkette von Teams. Jedes Team bearbeitet &lt;strong&gt;User Storys&lt;/strong&gt; und gibt sie an das nächste weiter.&lt;/p&gt;&#xA;Die &lt;strong&gt;Varianz&lt;/strong&gt; (Schwankung der Geschwindigkeit) hat einen enormen Einfluss. Bei 0% Varianz arbeiten alle wie Maschinen (immer 6 Storys). Bei 100% schwankt die Leistung stark (wie beim Würfeln 1-6).&lt;/p&gt;&#xA;&lt;p&gt;Stellen Sie die Varianz ein und starten Sie die Simulation.&lt;/p&gt;&#xA;&lt;/div&gt;&#xA;&lt;div id=&#34;sim-container&#34;&gt;&#xA;&lt;div class=&#34;controls-top centered margin-bottom-20&#34;&gt;&#xA;&lt;label for=&#34;variance-slider&#34;&gt;Varianz der Geschwindigkeit: &lt;span id=&#34;variance-val&#34;&gt;50&lt;/span&gt;%&lt;/label&gt;&#xA;&lt;input type=&#34;range&#34; id=&#34;variance-slider&#34; name=&#34;variance&#34; min=&#34;0&#34; max=&#34;100&#34; value=&#34;50&#34; style=&#34;width: 200px;&#34;&gt;&#xA;&lt;/div&gt;&#xA;&lt;div id=&#34;stations-line&#34;&gt;&lt;/div&gt;&#xA;&lt;div class=&#34;controls centered margin-top-30&#34;&gt;&#xA;&lt;button id=&#34;btn-next-round&#34; class=&#34;button-primary w-button&#34;&gt;Nächste Runde&lt;/button&gt;&#xA;&lt;button id=&#34;btn-auto&#34; class=&#34;button-primary w-button&#34; style=&#34;margin-left: 10px;&#34;&gt;Auto Play&lt;/button&gt;&#xA;&lt;button id=&#34;btn-reset&#34; class=&#34;button-secondary w-button&#34; style=&#34;margin-left: 10px;&#34;&gt;Reset&lt;/button&gt;&#xA;&lt;/div&gt;&#xA;&lt;div class=&#34;stats centered margin-top-20&#34;&gt;&#xA;&lt;p&gt;Runde: &lt;span id=&#34;round-counter&#34;&gt;0&lt;/span&gt; | Ø Durchsatz: &lt;span id=&#34;throughput&#34;&gt;0&lt;/span&gt;&lt;/p&gt;</description>
+    </item>
     <item>
       <title>3 Hebel, wie Sie den Flow zwischen Ihren Teams sofort verbessern können</title>
       <link>http://localhost:1313/blog/3-hebel-wie-sie-den-flow-zwischen-ihren-teams-sofort-verbessern-koennen/</link>

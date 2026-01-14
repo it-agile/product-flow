@@ -2,23 +2,27 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/</loc>
+    <loc>https://it-team-flow.de/</loc>
     <lastmod>2025-11-30T15:09:33+01:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/blog/3-hebel-wie-sie-den-flow-zwischen-ihren-teams-sofort-verbessern-koennen/</loc>
+    <loc>https://it-team-flow.de/blog/</loc>
+    <lastmod>2024-01-14T12:00:00+01:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/blog/</loc>
+    <loc>https://it-team-flow.de/blog/streichholz-simulation/</loc>
+    <lastmod>2024-01-14T12:00:00+01:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/categories/</loc>
+    <loc>https://it-team-flow.de/blog/3-hebel-wie-sie-den-flow-zwischen-ihren-teams-sofort-verbessern-koennen/</loc>
   </url><url>
-    <loc>http://localhost:1313/datenschutz.html</loc>
+    <loc>https://it-team-flow.de/categories/</loc>
   </url><url>
-    <loc>http://localhost:1313/impressum.html</loc>
+    <loc>https://it-team-flow.de/datenschutz.html</loc>
   </url><url>
-    <loc>http://localhost:1313/tags/</loc>
+    <loc>https://it-team-flow.de/impressum.html</loc>
   </url><url>
-    <loc>http://localhost:1313/blog/warum-es-in-it-organisationen-trotz-agiler-teams-oft-keinen-flow-gibt/</loc>
+    <loc>https://it-team-flow.de/tags/</loc>
   </url><url>
-    <loc>http://localhost:1313/blog/wie-sie-den-naechsten-schritt-vom-chaos-zum-flow-machen-ohne-ihr-ganzes-system-umzubauen/</loc>
+    <loc>https://it-team-flow.de/blog/warum-es-in-it-organisationen-trotz-agiler-teams-oft-keinen-flow-gibt/</loc>
+  </url><url>
+    <loc>https://it-team-flow.de/blog/wie-sie-den-naechsten-schritt-vom-chaos-zum-flow-machen-ohne-ihr-ganzes-system-umzubauen/</loc>
   </url>
 </urlset>
