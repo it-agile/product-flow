@@ -10,7 +10,7 @@ wf_page: "684991c327f4d0186c0e0f1f"
 <p>Stellen Sie sich vor, Sie haben eine Reihe von Teams, die gemeinsam <strong>business-relevante Features</strong> umsetzen müssen. Jedes Team entwickelt für seinen Bereich <strong>User Storys</strong>. Wenn ein Team seine User Storys für ein Feature umgesetzt hat, arbeitet das nächste Team an seinen User Storys im Rahmen der Features.</p>
 <p>Die <strong>Varianz des Team-Durchsatzes</strong> (User Storys/Sprint) hat einen enormen Einfluss auf die <strong>teamübergreifende Lieferfähigkeit</strong>. Dabei verstehen wir unter Varianz hier die <strong>Häufigkeit, mit der Abweichungen</strong> von der Durchschnittsgeschwindigkeit (8 Storys/Sprint) auftreten. Bei 0% Varianz arbeiten alle wie Maschinen (immer 8 Storys/Sprint). Bei 100% Varianz ist jeder Sprint turbulent und die Leistung schwankt in jedem Schritt stark (zwischen 0 und 16 Storys/Sprint).</p>
 <p> Je größer die Varianz, desto stärker schaukeln sich Varianzen auf. Das erklärt ein Phänomen, das sich immer wieder in der Praxis beobachten lässt: Jedes Team schätzt, arbeitet und liefert mustergültig. Die business-relevanten Features verzögern sich trotzdem. So kann es leicht passieren, dass trotz "optimaler" Planung immer nur 40% der eingeplanten business-relevanten Features wie geplant geliefert werden. Die Ursache sind sich aufschaukelnde Varianzen.</p>
-<p>Die Simulation veranschaulicht das Phänomen. Stellen Sie die Varianz ein und starten Sie die Simulation.</p>
+<p>Die <strong>Simulation</strong> veranschaulicht das Phänomen. Stellen Sie die Varianz ein und starten Sie die Simulation. Teams, die ihre volle Geschwindigkeit wegen fehlender User Storys nicht auf die Straße bringen können, werden <span class ="red">rot</span> dargestellt.</p>
 </div>
 
 <div id="sim-container">
@@ -67,6 +67,11 @@ align-items: center;
 font-weight: bold;
 font-size: 12px;
 margin-top: 10px;
+transition: background-color 0.3s, box-shadow 0.3s;
+}
+.team-box.starved {
+background-color: #D63319; /* Red */
+box-shadow: 0 0 10px rgba(214, 51, 25, 0.5);
 }
 .gauge {
 width: 80px;
@@ -282,15 +287,39 @@ label.innerText = 'Storys/Sprint: ' + speed;
 function nextRound() {
 round++;
 let moves = Array(numTeams).fill(0);
+let capacities = Array(numTeams).fill(0);
+
+// Team 1 (Source)
 const speed1 = calculateSpeed();
+capacities[0] = speed1;
 moves[0] = speed1; 
 updateGauge(0, speed1);
+// Team 1 is never starved
+const t1box = document.querySelector(`#stations-line > div:nth-child(1) .team-box`);
+if (t1box) t1box.classList.remove('starved');
 
 for (let i = 1; i < numTeams; i++) {
 const speed = calculateSpeed();
+capacities[i] = speed;
 const inputAvailable = piles[i-1];
 moves[i] = Math.min(inputAvailable, speed);
 updateGauge(i, speed);
+
+// Starvation check: if potential speed > actual moves
+// Note: stations-line structure: Team, Arrow, Buffer, Arrow, Team...
+// Team 1 is child 1, Team 2 is child 5 (1+4), Team 3 is child 9...
+// Better search by team-container class
+const teamContainers = document.querySelectorAll('.team-container');
+if (teamContainers[i]) {
+const box = teamContainers[i].querySelector('.team-box');
+if (box) {
+if (moves[i] < speed) {
+box.classList.add('starved');
+} else {
+box.classList.remove('starved');
+}
+}
+}
 }
 
 piles[0] += moves[0];
