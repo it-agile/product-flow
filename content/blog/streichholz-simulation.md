@@ -8,7 +8,7 @@ wf_page: "684991c327f4d0186c0e0f1f"
 <div class="container-content-blog">
 <h2 class="centered red"> Bei abhängigen Ereignissen schaukeln sich Varianzen auf! </h2>
 <p>Stellen Sie sich vor, Sie haben eine Reihe von Teams, die gemeinsam <strong>business-relevante Features</strong> umsetzen müssen. Jedes Team entwickelt für seinen Bereich <strong>User Storys</strong>. Wenn ein Team seine User Storys für ein Feature umgesetzt hat, arbeitet das nächste Team an seinen User Storys im Rahmen der Features.</p>
-<p>Die <strong>Varianz des Team-Durchsatzes</strong> (User Storys/Sprint) hat einen enormen Einfluss auf die <strong>teamübergreifende Lieferfähigkeit</strong>. Bei 0% Varianz arbeiten alle wie Maschinen (immer 8 Storys/Sprint). Bei 100% schwankt die Leistung stark (zwischen 0 und 16 Storys/Sprint).</p>
+<p>Die <strong>Varianz des Team-Durchsatzes</strong> (User Storys/Sprint) hat einen enormen Einfluss auf die <strong>teamübergreifende Lieferfähigkeit</strong>. Dabei verstehen wir unter Varianz hier die <strong>Häufigkeit, mit der Abweichungen</strong> von der Durchschnittsgeschwindigkeit (8 Storys/Sprint) auftreten. Bei 0% Varianz arbeiten alle wie Maschinen (immer 8 Storys/Sprint). Bei 100% Varianz ist jeder Sprint turbulent und die Leistung schwankt in jedem Schritt stark (zwischen 0 und 16 Storys/Sprint).</p>
 <p> Je größer die Varianz, desto stärker schaukeln sich Varianzen auf. Das erklärt ein Phänomen, das sich immer wieder in der Praxis beobachten lässt: Jedes Team schätzt, arbeitet und liefert mustergültig. Die business-relevanten Features verzögern sich trotzdem. So kann es leicht passieren, dass trotz "optimaler" Planung immer nur 40% der eingeplanten business-relevanten Features wie geplant geliefert werden. Die Ursache sind sich aufschaukelnde Varianzen.</p>
 <p>Die Simulation veranschaulicht das Phänomen. Stellen Sie die Varianz ein und starten Sie die Simulation.</p>
 </div>
@@ -157,7 +157,7 @@ margin: 0 2px 20px 2px;
 (function() {
 const numTeams = 6;
 const baseSpeed = 8;
-const maxBufferVisual = 20; // Increased visual cap for buffers
+const maxBufferVisual = 100; // Bars cap at 100 for visualization
 let piles = []; 
 let round = 0;
 let autoInterval = null;
@@ -236,9 +236,9 @@ const barEl = document.getElementById('bar-' + index);
 if (barEl) {
 const percentage = Math.min((count / maxBufferVisual) * 100, 100);
 barEl.style.height = percentage + '%';
-if (count > 15) {
+if (count > 50) {
 barEl.style.backgroundColor = '#ff0000';
-} else if (count > 8) {
+} else if (count > 20) {
 barEl.style.backgroundColor = '#ff9900';
 } else {
 barEl.style.backgroundColor = '#D63319';
@@ -254,12 +254,13 @@ return el ? parseInt(el.value, 10) : 50;
 
 function calculateSpeed() {
 const v = getVariance(); // 0..100
-if (v === 0) return baseSpeed;
-// Variance range: [base - V_range, base + V_range]
-// If V=100%, V_range = 8. Range = [0..16]. Avg = 8.
-const vRange = baseSpeed * (v / 100);
-const reduction = (Math.random() * (vRange * 2)) - vRange;
-return Math.max(0, Math.round(baseSpeed + reduction));
+// Variance interpreted as frequency of deviation
+// Probability of deviation is v/100
+if (Math.random() * 100 >= v) {
+return baseSpeed; // 8
+}
+// If deviation occurs, speed is random in [0..16], avg 8
+return Math.round(Math.random() * 16);
 }
 
 function updateGauge(teamIndex, speed) {
