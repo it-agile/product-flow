@@ -10,7 +10,7 @@ wf_page: "684991c327f4d0186c0e0f1f"
 <p>Stellen Sie sich vor, Sie haben eine Reihe von Teams, die gemeinsam <strong>business-relevante Features</strong> umsetzen müssen. Jedes Team entwickelt für seinen Bereich <strong>User Storys</strong>. Wenn ein Team seine User Storys für ein Feature umgesetzt hat, arbeitet das nächste Team an seinen User Storys im Rahmen der Features.</p>
 <p>Die <strong>Varianz des Team-Durchsatzes</strong> (User Storys/Sprint) hat einen enormen Einfluss auf die <strong>teamübergreifende Lieferfähigkeit</strong>. Dabei verstehen wir unter Varianz hier die <strong>Häufigkeit, mit der Abweichungen</strong> von der Durchschnittsgeschwindigkeit (8 Storys/Sprint) auftreten. Bei 0% Varianz arbeiten alle wie Maschinen (immer 8 Storys/Sprint). Bei 100% Varianz ist jeder Sprint turbulent und die Leistung schwankt in jedem Schritt stark (zwischen 0 und 16 Storys/Sprint).</p>
 <p> Je größer die Varianz, desto stärker schaukeln sich Varianzen auf. Das erklärt ein Phänomen, das sich immer wieder in der Praxis beobachten lässt: Jedes Team schätzt, arbeitet und liefert mustergültig. Die business-relevanten Features verzögern sich trotzdem. So kann es leicht passieren, dass trotz "optimaler" Planung immer nur 40% der eingeplanten business-relevanten Features wie geplant geliefert werden. Die Ursache sind sich aufschaukelnde Varianzen.</p>
-<p>Die <strong>Simulation</strong> veranschaulicht das Phänomen. Stellen Sie die Varianz ein und starten Sie die Simulation. Teams, die ihre volle Geschwindigkeit wegen fehlender User Storys nicht auf die Straße bringen können, werden <span class ="red">rot</span> dargestellt.</p>
+<p>Die Simulation veranschaulicht das Phänomen. Stellen Sie die Varianz ein und starten Sie die Simulation.</p>
 </div>
 
 <div id="sim-container">
@@ -25,7 +25,15 @@ wf_page: "684991c327f4d0186c0e0f1f"
 <button id="btn-reset" class="button-secondary w-button" style="margin-left: 10px;">Reset</button>
 </div>
 <div class="stats centered margin-top-20">
-<p>Runde: <span id="round-counter">0</span> | Ø Durchsatz: <span id="throughput">0</span></p>
+<div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+<p>Runde: <span id="round-counter">0</span></p>
+<p>Ø Durchsatz: <span id="throughput">0</span></p>
+<p>Durchlaufzeit: Ø <span id="lt-avg">0</span> | Min <span id="lt-min">0</span> | Max <span id="lt-max">0</span></p>
+</div>
+</div>
+<div class="centered margin-top-30">
+<p style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">Verteilung der Durchlaufzeiten</p>
+<div id="heatmap-container"></div>
 </div>
 </div>
 
@@ -156,19 +164,65 @@ color: #ccc;
 font-size: 12px;
 margin: 0 2px 20px 2px;
 }
+/* Heatmap Styles */
+#heatmap-container {
+display: flex;
+align-items: flex-end;
+height: 120px;
+gap: 4px;
+padding: 10px 20px 30px 20px;
+background: #fff;
+border: 1px solid #eee;
+border-radius: 4px;
+margin: 0 auto;
+max-width: 900px;
+overflow-x: auto;
+}
+.heatmap-bar {
+flex: 1;
+min-width: 20px;
+background: #4dff4d;
+position: relative;
+border-radius: 2px 2px 0 0;
+transition: height 0.3s, background-color 0.3s;
+}
+.heatmap-bar:hover {
+opacity: 0.8;
+}
+.heatmap-label {
+position: absolute;
+bottom: -22px;
+width: 100%;
+text-align: center;
+font-size: 10px;
+font-weight: bold;
+color: #666;
+}
+.heatmap-tooltip {
+position: absolute;
+top: -20px;
+width: 100%;
+text-align: center;
+font-size: 9px;
+color: #333;
+}
 </style>
 
 <script>
 (function() {
 const numTeams = 6;
 const baseSpeed = 8;
-const maxBufferVisual = 100; // Bars cap at 100 for visualization
+const maxBufferVisual = 100; 
 let piles = []; 
+let leadTimes = []; 
+let leadTimeDist = {}; // Object to track frequency of each lead time
 let round = 0;
 let autoInterval = null;
 
 function init() {
-piles = Array(numTeams).fill(0);
+piles = Array.from({ length: numTeams }, () => []);
+leadTimes = [];
+leadTimeDist = {};
 round = 0;
 renderLine();
 updateUI();
@@ -225,20 +279,34 @@ container.appendChild(arrowEnd);
 }
 
 function updateUI() {
-const roundEl = document.getElementById('round-counter');
-const throughputEl = document.getElementById('throughput');
-if (roundEl) roundEl.innerText = round;
-if (throughputEl) {
-const avg = round > 0 ? (piles[numTeams-1] / round).toFixed(1) : 0;
-throughputEl.innerText = avg;
+document.getElementById('round-counter').innerText = round;
+
+const finishedCount = piles[numTeams - 1].length;
+const avgThroughput = round > 0 ? (finishedCount / round).toFixed(1) : 0;
+document.getElementById('throughput').innerText = avgThroughput;
+
+if (leadTimes.length > 0) {
+const minLT = Math.min(...leadTimes);
+const maxLT = Math.max(...leadTimes);
+const avgLT = (leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length).toFixed(1);
+document.getElementById('lt-avg').innerText = avgLT;
+document.getElementById('lt-min').innerText = minLT;
+document.getElementById('lt-max').innerText = maxLT;
+renderHeatmap(minLT, maxLT);
+} else {
+document.getElementById('lt-avg').innerText = '0';
+document.getElementById('lt-min').innerText = '0';
+document.getElementById('lt-max').innerText = '0';
+document.getElementById('heatmap-container').innerHTML = '';
 }
 
-piles.forEach((count, index) => {
+piles.forEach((pile, index) => {
 const countEl = document.getElementById('count-' + index);
-if (countEl) countEl.innerText = count;
+if (countEl) countEl.innerText = pile.length;
 
 const barEl = document.getElementById('bar-' + index);
 if (barEl) {
+const count = pile.length;
 const percentage = Math.min((count / maxBufferVisual) * 100, 100);
 barEl.style.height = percentage + '%';
 if (count > 50) {
@@ -252,19 +320,53 @@ barEl.style.backgroundColor = '#D63319';
 });
 }
 
+function renderHeatmap(min, max) {
+const container = document.getElementById('heatmap-container');
+if (!container) return;
+container.innerHTML = '';
+
+// Define common start point (6) to keep bars stable or use dynamic relative to min
+const start = Math.min(6, min);
+const end = max;
+
+for (let i = start; i <= end; i++) {
+const freq = leadTimeDist[i] || 0;
+// Scale height so that 100 stories = 100% height
+const scaleLimit = 100;
+const heightPerc = Math.min((freq / scaleLimit) * 100, 100);
+
+const bar = document.createElement('div');
+bar.className = 'heatmap-bar';
+bar.style.height = heightPerc + '%';
+
+// Map color based on duration
+// duration 6 -> green
+// duration 15 -> yellow
+// duration 30+ -> red
+let color = '#4dff4d';
+if (i > 25) color = '#ff4d4d';
+else if (i > 15) color = '#ff9933';
+else if (i > 8) color = '#ffd633';
+
+bar.style.backgroundColor = color;
+bar.innerHTML = `
+<div class="heatmap-tooltip">${freq > 0 ? freq : ''} User Storys</div>
+<div class="heatmap-label">${i} Sprints</div>
+`;
+container.appendChild(bar);
+}
+}
+
 function getVariance() {
 const el = document.getElementById('variance-slider');
 return el ? parseInt(el.value, 10) : 50;
 }
 
 function calculateSpeed() {
-const v = getVariance(); // 0..100
-// Variance interpreted as frequency of deviation
-// Probability of deviation is v/100
+const v = getVariance();
 if (Math.random() * 100 >= v) {
-return baseSpeed; // 8
+return baseSpeed;
 }
-// If deviation occurs, speed is random in [0..16], avg 8
 return Math.round(Math.random() * 16);
 }
 
@@ -272,10 +374,6 @@ function updateGauge(teamIndex, speed) {
 const needle = document.getElementById('needle-' + teamIndex);
 const label = document.getElementById('speed-label-' + teamIndex);
 if (needle) {
-// Map 0..16 speed to -90 to +90 degrees
-// 0 -> -90
-// 8 -> 0
-// 16 -> +90
 const angle = (speed / 16) * 180 - 90;
 needle.style.transform = 'rotate(' + angle + 'deg)';
 }
@@ -289,26 +387,20 @@ round++;
 let moves = Array(numTeams).fill(0);
 let capacities = Array(numTeams).fill(0);
 
-// Team 1 (Source)
 const speed1 = calculateSpeed();
 capacities[0] = speed1;
 moves[0] = speed1; 
 updateGauge(0, speed1);
-// Team 1 is never starved
-const t1box = document.querySelector(`#stations-line > div:nth-child(1) .team-box`);
+const t1box = document.querySelector(`.team-container:nth-child(1) .team-box`);
 if (t1box) t1box.classList.remove('starved');
 
 for (let i = 1; i < numTeams; i++) {
 const speed = calculateSpeed();
 capacities[i] = speed;
-const inputAvailable = piles[i-1];
+const inputAvailable = piles[i-1].length;
 moves[i] = Math.min(inputAvailable, speed);
 updateGauge(i, speed);
 
-// Starvation check: if potential speed > actual moves
-// Note: stations-line structure: Team, Arrow, Buffer, Arrow, Team...
-// Team 1 is child 1, Team 2 is child 5 (1+4), Team 3 is child 9...
-// Better search by team-container class
 const teamContainers = document.querySelectorAll('.team-container');
 if (teamContainers[i]) {
 const box = teamContainers[i].querySelector('.team-box');
@@ -322,11 +414,23 @@ box.classList.remove('starved');
 }
 }
 
-piles[0] += moves[0];
-for (let i = 1; i < numTeams; i++) {
-piles[i-1] -= moves[i];
-piles[i] += moves[i];
+for (let i = numTeams - 1; i >= 1; i--) {
+const countToMove = moves[i];
+for (let j = 0; j < countToMove; j++) {
+const storyTimestamp = piles[i-1].shift();
+piles[i].push(storyTimestamp);
+if (i === numTeams - 1) {
+const lt = round - storyTimestamp + 1;
+leadTimes.push(lt);
+leadTimeDist[lt] = (leadTimeDist[lt] || 0) + 1;
 }
+}
+}
+
+for (let j = 0; j < moves[0]; j++) {
+piles[0].push(round);
+}
+
 updateUI();
 }
 
@@ -352,6 +456,8 @@ if(needle) needle.style.transform = 'rotate(-90deg)';
 const label = document.getElementById('speed-label-' + i);
 if(label) label.innerText = 'Storys/Sprint: -';
 }
+const teamBoxes = document.querySelectorAll('.team-box');
+teamBoxes.forEach(box => box.classList.remove('starved'));
 });
 }
 const btnAuto = document.getElementById('btn-auto');
@@ -376,6 +482,7 @@ init();
 <p>Wenn Sie die Varianz auf <strong>0%</strong> stellen, arbeitet jedes Team in der immer gleichen Geschwindigkeit. Jedes Team liefert perfekt. Da es keine Varianzen gibt, können sich diese nicht aufschaukeln und business-relevante Features würden wie geplant geliefert werden.</p>
 <p>Sobald Sie die Varianz erhöhen (z.B. <strong>50%</strong>), passiert etwas Spannendes: Ein Team hätte Kapazität, um an einem Feature zu arbeiten, wird aber ausgebremst, weil das vorgelagerte Team seine Arbeit noch nicht abgeschlossen hat. Gleichzeitig staut sich Arbeit vor anderen Teams. Diese Effekte schaukeln sich mit der Zeit auf.</p>
 <p>Teamübergreifende Lieferfähigkeit geht verloren, nicht weil die Teams langsam sind, sondern weil das gewählte Arbeitssystem dazu führt, dass sich Varianzen aufschaukeln.</p>
+<p>Die <strong>Hitzekarte</strong> oben zeigt dies eindrucksvoll: Bei hoher Varianz "wandert" die Verteilung nach rechts (rote Balken) und wird breiter. Das System wird unvorhersehbar.</p>
 <p class="intro centered margin-top-30"><strong>Lieferfähigkeit entsteht nicht durch lokalen Druck, sondern durch die Wahl eines geeigneten Arbeitssystems und systemischer Steuerung.</strong></p>
 <p class="intro red centered margin-top-30"><strong>Erfahren Sie mehr in einem unserer Webinare.</strong></p>
 <div class="centered">
