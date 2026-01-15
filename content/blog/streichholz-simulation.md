@@ -344,7 +344,7 @@ init();
 <div class="container-content-blog margin-top-60">
 <h2>Was beobachten wir hier?</h2>
 <p>Wenn Sie die Varianz auf <strong>0%</strong> stellen, arbeitet jedes Team in der immer gleichen Geschwindigkeit. Jedes Team liefert perfekt. Da es keine Varianzen gibt, können sich diese nicht aufschaukeln und business-relevante Features würden wie geplant geliefert werden.</p>
-<p>Sobald Sie die Varianz erhöhen (z.B. <strong>50%</strong>), passiert etwas Spannendes: Obwohl die Teams oft schnell sein könnten, <strong>verhungern</strong> sie, weil keine Arbeit da ist: Ein Team hätte Kapazität, um an einem Feature zu arbeiten, wird aber ausgebremst, weil das vorgelagerte Team seine Arbeit noch nicht abgeschlossen hat. Gleichzeitig staut sich Arbeit vor anderen Teams.</p>
+<p>Sobald Sie die Varianz erhöhen (z.B. <strong>50%</strong>), passiert etwas Spannendes: Ein Team hätte Kapazität, um an einem Feature zu arbeiten, wird aber ausgebremst, weil das vorgelagerte Team seine Arbeit noch nicht abgeschlossen hat. Gleichzeitig staut sich Arbeit vor anderen Teams. Diese Effekte schaukeln sich mit der Zeit auf.</p>
 <p>Teamübergreifende Lieferfähigkeit geht verloren, nicht weil die Teams langsam sind, sondern weil das gewählte Arbeitssystem dazu führt, dass sich Varianzen aufschaukeln.</p>
 <p class="intro centered margin-top-30"><strong>Lieferfähigkeit entsteht nicht durch lokalen Druck, sondern durch die Wahl eines geeigneten Arbeitssystems und systemischer Steuerung.</strong></p>
 <p class="intro red centered margin-top-30"><strong>Erfahren Sie mehr in einem unserer Webinare.</strong></p>
