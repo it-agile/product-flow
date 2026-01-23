@@ -18,7 +18,7 @@ params:
   
   # Reality Section
   reality_headline_highlight: "Die Realität in vielen IT-Organisationen und IT-Abteilungen:"
-  reality_headline_text: "Sie investieren in agile Methoden, trainieren Teams, strukturieren Prozesse – und trotzdem fehlt der Flow zwischen den Teams."
+  reality_headline_text: "Ihr investiert in agile Methoden, trainiert Teams, strukturiert Prozesse – und trotzdem fehlt der Flow zwischen den Teams."
   reality_intro: "Das Ergebnis: Frust in den Teams, Verzögerungen bei wichtigen Vorhaben und wachsender Druck von oben."
   
   reality_block1_title: "Vorhaben bleiben zwischen den Teams liegen:"
@@ -54,10 +54,10 @@ params:
   workshop_intro: "Erprobt in vielen komplexen Organisationen mit über 100 Mitarbeitenden in der IT."
   
   step1_title: "Flow-Scan:<br>Sehen was blockiert"
-  step1_text: "Wir analysieren Ihr System, machen systemische Engpässe sichtbar und schaffen Klarheit, über die konkreten Schritte, um teamübergreifende Lieferfähigkeit herzustellen."
+  step1_text: "Wir analysieren euer System, machen systemische Engpässe sichtbar und schaffen Klarheit, über die konkreten Schritte, um teamübergreifende Lieferfähigkeit herzustellen."
   
   step2_title: "Flow-IT:<br>teamübergreifende Lieferfähigkeit"
-  step2_text: "Gemeinsam mit Ihren Teams bauen wir ein übergreifendes Flow-System auf – mit klarer Steuerung. Die Entwicklung kommt endlich ins Fließen und liefert."
+  step2_text: "Gemeinsam mit euren Teams bauen wir ein übergreifendes Flow-System auf – mit klarer Steuerung. Die Entwicklung kommt endlich ins Fließen und liefert."
   
   step3_title: "Flow-Kunde:<br>Kundenerwartungen erfüllen"
   step3_text: "Die schnelle und verlässliche Lieferung optimiert Wertschöpfung für Kunden."
@@ -70,5 +70,5 @@ params:
   # Webinar Section
   webinar_headline: "Kostenfreies Webinar"
   webinar_headline_highlight: "»teamübergreifende Lieferfähigkeit«"
-  webinar_text: "Erfahren Sie in unserem Webinar, wie Sie Engpässe erkennen, 7x schnellere Time-to-Market erreichen und dabei Budgets sparen.<br>Erhalten Sie fundierte Einblicke und konkrete Lösungsansätze für mehr Flow in Ihrem Team."
+  webinar_text: "Erfahre in unserem Webinar, wie du Engpässe erkennst, 7x schnellere Time-to-Market erreichst und dabei Budget sparst.<br>Erhalte fundierte Einblicke und konkrete Lösungsansätze für mehr Flow in deinem Team."
 ---

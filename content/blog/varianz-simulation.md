@@ -7,18 +7,18 @@ wf_page: "684991c327f4d0186c0e0f1f"
 
 <div class="container-content-blog">
 <h2 class="centered red"> Bei abhängigen Ereignissen schaukeln sich Varianzen auf! </h2>
-<p>Stellen Sie sich vor, Sie haben eine Reihe von Teams, die gemeinsam <strong>business-relevante Features</strong> umsetzen müssen. Jedes Team entwickelt für seinen Bereich <strong>User Storys</strong>. Wenn ein Team seine User Storys für ein Feature umgesetzt hat, arbeitet das nächste Team an seinen User Storys im Rahmen der Features.</p>
+<p>Stell dir vor, du hast eine Reihe von Teams, die gemeinsam <strong>business-relevante Features</strong> umsetzen müssen. Jedes Team entwickelt für seinen Bereich <strong>User Storys</strong>. Wenn ein Team seine User Storys für ein Feature umgesetzt hat, arbeitet das nächste Team an seinen User Storys im Rahmen der Features.</p>
 <p>Die <strong>Varianz des Team-Durchsatzes</strong> (User Storys/Sprint) hat einen enormen Einfluss auf die <strong>teamübergreifende Lieferfähigkeit</strong>. Dabei verstehen wir unter Varianz hier die <strong>Häufigkeit, mit der Abweichungen</strong> von der Durchschnittsgeschwindigkeit (8 Storys/Sprint) auftreten. Bei 0% Varianz arbeiten alle wie Maschinen (immer 8 Storys/Sprint). Bei 100% Varianz ist jeder Sprint turbulent und die Leistung schwankt in jedem Schritt stark (zwischen 0 und 16 Storys/Sprint).</p>
 <p> Je größer die Varianz, desto stärker schaukeln sich Varianzen auf. Das erklärt ein Phänomen, das sich immer wieder in der Praxis beobachten lässt: Jedes Team schätzt, arbeitet und liefert mustergültig. Die business-relevanten Features verzögern sich trotzdem. So kann es leicht passieren, dass trotz "optimaler" Planung immer nur 40% der eingeplanten business-relevanten Features wie geplant geliefert werden. Die Ursache sind sich aufschaukelnde Varianzen.</p>
 </div>
-<p class="intro red centered margin-top-30"><strong>Erfahren Sie mehr in einem unserer Webinare.</strong></p>
+<p class="intro red centered margin-top-30"><strong>Erfahre mehr in einem unserer Webinare.</strong></p>
 <div class="centered">
 <a href="{{< webinar_url >}}" target="_blank" class="button-primary w-button">Zum kostenfreien Webinar anmelden</a>
 <div/>
 <h2>&nbsp;</h2>
 <div class="container-content-blog">
 <h2 class="centered red">Die Simulation</h2>
-<p>Die <strong>Simulation</strong> veranschaulicht das Phänomen. Stellen Sie die Varianz ein und starten Sie die Simulation. Immer wenn ein Team wegen fehlender Vorarbeit seine Leistung nicht vollständig auf die Straße bringen kann, wird es <span class="red">rot</span> markiert.</p>
+<p>Die <strong>Simulation</strong> veranschaulicht das Phänomen. Stelle die Varianz ein und starte die Simulation. Immer wenn ein Team wegen fehlender Vorarbeit seine Leistung nicht vollständig auf die Straße bringen kann, wird es <span class="red">rot</span> markiert.</p>
 </div>
 
 <div id="sim-container">
@@ -487,12 +487,12 @@ init();
 
 <div class="container-content-blog margin-top-60">
 <h2>Was beobachten wir hier?</h2>
-<p>Wenn Sie die Varianz auf <strong>0%</strong> stellen, arbeitet jedes Team in der immer gleichen Geschwindigkeit. Jedes Team liefert perfekt. Da es keine Varianzen gibt, können sich diese nicht aufschaukeln und business-relevante Features würden wie geplant geliefert werden.</p>
-<p>Sobald Sie die Varianz erhöhen (z.B. <strong>50%</strong>), passiert etwas Spannendes: Ein Team hätte Kapazität, um an einem Feature zu arbeiten, wird aber ausgebremst, weil das vorgelagerte Team seine Arbeit noch nicht abgeschlossen hat. Gleichzeitig staut sich Arbeit vor anderen Teams. Diese Effekte schaukeln sich mit der Zeit auf.</p>
+<p>Wenn du die Varianz auf <strong>0%</strong> stellst, arbeitet jedes Team in der immer gleichen Geschwindigkeit. Jedes Team liefert perfekt. Da es keine Varianzen gibt, können sich diese nicht aufschaukeln und business-relevante Features würden wie geplant geliefert werden.</p>
+<p>Sobald du die Varianz erhöhst (z.B. <strong>50%</strong>), passiert etwas Spannendes: Ein Team hätte Kapazität, um an einem Feature zu arbeiten, wird aber ausgebremst, weil das vorgelagerte Team seine Arbeit noch nicht abgeschlossen hat. Gleichzeitig staut sich Arbeit vor anderen Teams. Diese Effekte schaukeln sich mit der Zeit auf.</p>
 <p>Teamübergreifende Lieferfähigkeit geht verloren, nicht weil die Teams langsam sind, sondern weil das gewählte Arbeitssystem dazu führt, dass sich Varianzen aufschaukeln.</p>
 <p>Das Verteilungsdiagramm oben zeigt dies eindrucksvoll: Bei hoher Varianz "wandert" die Verteilung nach rechts (rote Balken) und wird breiter. Das System wird unvorhersehbar.</p>
 <p class="intro centered margin-top-30"><strong>Lieferfähigkeit entsteht nicht durch lokalen Druck, sondern durch die Wahl eines geeigneten Arbeitssystems und systemischer Steuerung.</strong></p>
-<p class="intro red centered margin-top-30"><strong>Erfahren Sie mehr in einem unserer Webinare.</strong></p>
+<p class="intro red centered margin-top-30"><strong>Erfahre mehr in einem unserer Webinare.</strong></p>
 <div class="centered">
 <a href="{{< webinar_url >}}" target="_blank" class="button-primary w-button">Zum kostenfreien Webinar anmelden</a>
 </div>
