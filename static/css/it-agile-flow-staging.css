@@ -245,6 +245,52 @@ strong {
   position: relative;
 }
 
+/* Kundenlogos. Weisse Kacheln, weil neun der Vorlagen einen undurchsichtig
+   weissen und eine einen blauen Hintergrund mitbringen -- auf dem cremefarbenen
+   Untergrund waeren das sichtbare Kaesten in drei verschiedenen Farben. Die
+   Hoehe je Logo steht im Markup und ist aus dem Seitenverhaeltnis berechnet,
+   damit ein Quadrat und ein breiter Schriftzug gleich viel Flaeche einnehmen.
+   Ohne das wirkt ein 7,8:1-Schriftzug wie Daimler winzig neben einem Quadrat. */
+.logo-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin: 10px 0 56px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.logo-grid li {
+  min-height: 76px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: var(--white);
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+/* Beispielprofil neben dem Quick Check. Die Grafik ist dieselbe Zielscheibe,
+   die der Fragebogen am Ende zeichnet, mit erfundenen Werten. */
+.quick-check-beispiel {
+  width: 100%;
+  max-width: 460px;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+.muted {
+  color: #55554e;
+  font-size: .9rem;
+}
+
+.logo-grid img {
+  max-width: 100%;
+  width: auto;
+  display: block;
+}
+
 .red {
   color: var(--red);
 }

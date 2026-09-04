@@ -148,21 +148,45 @@
   </section>
   <section id="quick-check" class="section">
     <div class="container-content">
-      <h2 class="centered">{{ .Params.quickcheck_headline }}<br><span class="red">{{
-          .Params.quickcheck_headline_highlight }}</span></h2>
-      <p class="intro centered limit">{{ .Params.quickcheck_text | safeHTML }}</p>
-      <div class="centered margin-top-30">
-        <a href="{{ "quick-check/" | absURL }}" class="button-primary w-button">{{ .Params.quickcheck_button }}</a>
+      <div class="w-layout-grid grid-2 center">
+        <div class="wrapper-padding">
+          <h2>{{ .Params.quickcheck_headline }}<br><span class="red">{{
+              .Params.quickcheck_headline_highlight }}</span></h2>
+          <p class="intro">{{ .Params.quickcheck_text | safeHTML }}</p>
+          <a href="{{ "quick-check/" | absURL }}" class="button-primary w-button">{{ .Params.quickcheck_button }}</a>
+        </div>
+        <div>
+          <img src="images/quick-check-beispielprofil.svg" loading="lazy"
+            alt="Beispielergebnis des Quick Checks als Zielscheibe mit den fünf LASTA-Dimensionen: Leadership 3,7, Alignment 2,3, Steuerung 2,0, Teams 4,2, Architektur 3,0. Die drei Bewertungszonen sind farblich hinterlegt."
+            class="quick-check-beispiel">
+          <p class="muted centered">Beispielprofil</p>
+        </div>
       </div>
     </div>
   </section>
   <section id="kundenstimmen" class="section">
     <div class="container-content">
       <h2 class="centered"><strong>Vertrauen von über 700 Unternehmen</strong></h2>
-      <p class="intro centered limit">Unsere Coaches, Berater und Entwickler haben eine ganze Reihe erfolgreicher
-        Projekte für über 700 Unternehmen durchgeführt. <br>Darunter finden sich 40 % aller DAX30 Unternehmen – namhafte
-        Kunden wie BMW, Bayer, Zeiss, mobile.de, Otto, die Deutsche Telekom, die SAP AG oder die hama GmbH &amp; Co. KG.
-      </p>
+      <p class="intro centered limit">Unsere Coaches, Berater und Entwickler haben eine ganze Reihe
+        erfolgreicher Projekte durchgeführt – vom DAX-Konzern bis zum Mittelständler.</p>
+      <ul class="logo-grid">
+        <li><img src="images/logos/bmw.png?v=2" loading="lazy" alt="BMW" style="height:46px"></li>
+        <li><img src="images/logos/bayer.png?v=2" loading="lazy" alt="Bayer" style="height:46px"></li>
+        <li><img src="images/logos/deutsche-bank.png?v=2" loading="lazy" alt="Deutsche Bank" style="height:46px"></li>
+        <li><img src="images/logos/1und1.png?v=2" loading="lazy" alt="1&amp;1" style="height:46px"></li>
+        <li><img src="images/logos/sap.png?v=2" loading="lazy" alt="SAP" style="height:46px"></li>
+        <li><img src="images/logos/hdi.png?v=2" loading="lazy" alt="HDI" style="height:46px"></li>
+        <li><img src="images/logos/siemens.png?v=2" loading="lazy" alt="Siemens" style="height:26px"></li>
+        <li><img src="images/logos/telekom.png?v=2" loading="lazy" alt="Deutsche Telekom" style="height:26px"></li>
+        <li><img src="images/logos/airbus.png?v=2" loading="lazy" alt="Airbus" style="height:26px"></li>
+        <li><img src="images/logos/deutsche-boerse.png?v=2" loading="lazy" alt="Deutsche Börse" style="height:26px"></li>
+        <li><img src="images/logos/olympus.png?v=2" loading="lazy" alt="Olympus" style="height:26px"></li>
+        <li><img src="images/logos/software-ag.png?v=2" loading="lazy" alt="Software AG" style="height:26px"></li>
+        <li><img src="images/logos/ergo.png?v=2" loading="lazy" alt="ERGO" style="height:26px"></li>
+        <li><img src="images/logos/otto.png?v=2" loading="lazy" alt="Otto" style="height:26px"></li>
+        <li><img src="images/logos/hama.png?v=2" loading="lazy" alt="hama" style="height:26px"></li>
+        <li><img src="images/logos/daimler.png?v=2" loading="lazy" alt="Daimler" style="height:20px"></li>
+      </ul>
       <div data-delay="7000" data-animation="fade" class="slider-testimonials w-slider" data-autoplay="true"
         data-easing="ease" data-hide-arrows="false" data-disable-swipe="false" data-autoplay-limit="0"
         data-nav-spacing="3" data-duration="100" data-infinite="true">
@@ -183,10 +207,10 @@
             </div>
           </div>
         </div>
-        <div data-w-id="9b1fa948-3730-4539-f4fb-b91d400ac3ff" class="slider-arrow-left w-slider-arrow-left">
+        <div data-w-id="9b1fa948-3730-4539-f4fb-b91d400ac3ff" class="hide slider-arrow-left w-slider-arrow-left">
           <div class="icon-arrow w-icon-slider-left"></div>
         </div>
-        <div data-w-id="9b1fa948-3730-4539-f4fb-b91d400ac401" class="slider-arrow-right w-slider-arrow-right">
+        <div data-w-id="9b1fa948-3730-4539-f4fb-b91d400ac401" class="hide slider-arrow-right w-slider-arrow-right">
           <div class="icon-arrow w-icon-slider-right"></div>
         </div>
         <div class="hide w-slider-nav w-round w-num"></div>

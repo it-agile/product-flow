@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 440" role="img" aria-label="Beispielergebnis des Quick Checks: Zielscheibe der fünf LASTA-Dimensionen. Leadership 3,7 von 5, teilweise wirksam. Alignment 2,3 von 5, teilweise wirksam. Steuerung 2,0 von 5, teilweise wirksam. Teams 4,2 von 5, wirksam. Architektur 3,0 von 5, teilweise wirksam">
+<polygon points="260.0,95.0 378.9,181.4 333.5,321.1 186.5,321.1 141.1,181.4" fill="#e3ede1"/>
+<polygon points="260.0,120.0 355.1,189.1 318.8,300.9 201.2,300.9 164.9,189.1" fill="#f9ecd6"/>
+<polygon points="260.0,170.0 307.6,204.5 289.4,260.5 230.6,260.5 212.4,204.5" fill="#f4ded9"/>
+<polygon points="260.0,195.0 283.8,212.3 274.7,240.2 245.3,240.2 236.2,212.3" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+<polygon points="260.0,170.0 307.6,204.5 289.4,260.5 230.6,260.5 212.4,204.5" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+<polygon points="260.0,145.0 331.3,196.8 304.1,280.7 215.9,280.7 188.7,196.8" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+<polygon points="260.0,120.0 355.1,189.1 318.8,300.9 201.2,300.9 164.9,189.1" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+<polygon points="260.0,95.0 378.9,181.4 333.5,321.1 186.5,321.1 141.1,181.4" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+<polygon points="260.0,170.0 307.6,204.5 289.4,260.5 230.6,260.5 212.4,204.5" fill="none" stroke="#9d9d8c" stroke-width="1" stroke-dasharray="4 3"/>
+<polygon points="260.0,120.0 355.1,189.1 318.8,300.9 201.2,300.9 164.9,189.1" fill="none" stroke="#9d9d8c" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="260.0" y1="220.0" x2="260.0" y2="95.0" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="260.0" y1="220.0" x2="378.9" y2="181.4" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="260.0" y1="220.0" x2="333.5" y2="321.1" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="260.0" y1="220.0" x2="186.5" y2="321.1" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="260.0" y1="220.0" x2="141.1" y2="181.4" stroke="#ffffff" stroke-width="1.5"/>
+<polygon points="260.0,127.5 314.7,202.2 289.4,260.5 198.3,304.9 188.7,196.8" fill="rgba(234,93,18,0.30)" stroke="#ea5d12" stroke-width="2.5"/>
+<circle cx="260.0" cy="127.5" r="5" fill="#ea5d12" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="314.7" cy="202.2" r="5" fill="#ea5d12" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="289.4" cy="260.5" r="5" fill="#ea5d12" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="198.3" cy="304.9" r="5" fill="#ea5d12" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="188.7" cy="196.8" r="5" fill="#ea5d12" stroke="#ffffff" stroke-width="1.5"/>
+<text x="260.0" y="249.0" text-anchor="middle" font-size="11" fill="#55554e" paint-order="stroke" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round">1</text>
+<text x="260.0" y="274.0" text-anchor="middle" font-size="11" fill="#55554e" paint-order="stroke" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round">2</text>
+<text x="260.0" y="299.0" text-anchor="middle" font-size="11" fill="#55554e" paint-order="stroke" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round">3</text>
+<text x="260.0" y="324.0" text-anchor="middle" font-size="11" fill="#55554e" paint-order="stroke" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round">4</text>
+<text x="260.0" y="349.0" text-anchor="middle" font-size="11" fill="#55554e" paint-order="stroke" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round">5</text>
+<text x="260.0" y="74.0" text-anchor="middle" font-size="15" font-weight="700" fill="#222" font-family="Source Sans 3, Noto Sans, system-ui, sans-serif">Leadership <tspan font-weight="400" font-size="13.5" fill="#55554e">3,7</tspan></text>
+<text x="403.6" y="178.3" text-anchor="start" font-size="15" font-weight="700" fill="#222" font-family="Source Sans 3, Noto Sans, system-ui, sans-serif">Alignment <tspan font-weight="400" font-size="13.5" fill="#55554e">2,3</tspan></text>
+<text x="348.8" y="347.2" text-anchor="start" font-size="15" font-weight="700" fill="#222" font-family="Source Sans 3, Noto Sans, system-ui, sans-serif">Steuerung <tspan font-weight="400" font-size="13.5" fill="#55554e">2,0</tspan></text>
+<text x="171.2" y="347.2" text-anchor="end" font-size="15" font-weight="700" fill="#222" font-family="Source Sans 3, Noto Sans, system-ui, sans-serif">Teams <tspan font-weight="400" font-size="13.5" fill="#55554e">4,2</tspan></text>
+<text x="116.4" y="178.3" text-anchor="end" font-size="15" font-weight="700" fill="#222" font-family="Source Sans 3, Noto Sans, system-ui, sans-serif">Architektur <tspan font-weight="400" font-size="13.5" fill="#55554e">3,0</tspan></text>
+</svg>
