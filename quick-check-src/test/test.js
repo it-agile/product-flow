@@ -1213,10 +1213,19 @@ async function main() {
       /typeform/i.test(fs.readFileSync(f, "utf8"))).map((f) => path.relative(REPO, f));
     check("kein Verweis auf Typeform mehr", mitTypeform.length === 0, mitTypeform);
 
-    // Die neue Seite muss von der Site aus erreichbar sein, nicht nur per Adresse.
-    const eintraege = fs.readFileSync(path.join(REPO, "content", "blog_entries.md"), "utf8");
+    /* Die neue Seite muss von der Site aus erreichbar sein, nicht nur per
+     * Adresse. Sie lag zuerst als fuenfte von fuenf Blogkacheln in
+     * blog_entries.md, also bei 84 Prozent Seitentiefe und aeusserlich nicht
+     * von einem Artikel zu unterscheiden. Seit sie eine eigene Sektion hat,
+     * steht der Verweis in der Vorlage der Startseite. */
+    const startseite = fs.readFileSync(path.join(REPO, "layouts", "index.html"), "utf8");
+    check("Quick Check hat eine eigene Sektion auf der Startseite",
+      /id="quick-check"/.test(startseite));
     check("Quick Check ist von der Startseite aus verlinkt",
-      /url:\s*"quick-check\/"/.test(eintraege));
+      /"quick-check\/"\s*\|\s*absURL/.test(startseite));
+    check("Quick Check nicht mehr als Blogkachel",
+      !/url:\s*"quick-check\/"/.test(
+        fs.readFileSync(path.join(REPO, "content", "blog_entries.md"), "utf8")));
     [...dokumente].sort().forEach((rel) => {
       check("in static/ vorhanden: " + rel,
         fs.existsSync(path.join(REPO, "static", rel)));

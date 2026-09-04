@@ -62,6 +62,12 @@ params:
   step3_title: "Flow-Kunde:<br>Kundenerwartungen erfüllen"
   step3_text: "Die schnelle und verlässliche Lieferung optimiert Wertschöpfung für Kunden."
 
+  # Quick Check Section
+  quickcheck_headline: "Wo steht eure teamübergreifende Lieferfähigkeit?"
+  quickcheck_headline_highlight: "15 Aussagen. 5 Minuten. Sofort ein Ergebnis."
+  quickcheck_text: "Der LASTA Quick Check zeigt entlang von fünf Dimensionen – Leadership, Alignment, Steuerung, Teams, Architektur –, wo der Flow zwischen euren Teams hakt. Kostenfrei, ohne Anmeldung, das Ergebnis erscheint sofort im Browser."
+  quickcheck_button: "Quick Check starten"
+
   # About Section
   about_headline: "Wir sind it-agile."
   about_headline_highlight: "Wir bringen IT-Organisationen in den Flow."

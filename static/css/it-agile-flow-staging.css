@@ -1408,7 +1408,9 @@ strong {
     grid-row-gap: 40px;
   }
 
-  .grid-2.center.margin-top-60.margin-bottom-2-5.mobile-hide {
+  /* Nur die drei Organigramme ausblenden. Vorher lag die Regel auf dem
+     Raster und nahm den Erklaertext und den Knopf mit. */
+  .graphics-mobile-hide {
     display: none;
   }
 

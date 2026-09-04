@@ -2,6 +2,12 @@ baseURL = 'https://it-team-flow.de/'
 languageCode = 'de-de'
 title = 'it-team-flow'
 
+# Kategorien und Schlagworte werden nirgends benutzt. Ohne diese Zeile erzeugt
+# Hugo trotzdem /categories/ und /tags/ und listet sie in der sitemap.xml.
+# 'section' betrifft die automatische Uebersichtsseite /blog/. Fuer sie gibt es
+# kein Layout, sie landete aber in der Sitemap und antwortete dort mit 404.
+disableKinds = ['taxonomy', 'term', 'section']
+
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]

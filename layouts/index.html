@@ -1,5 +1,5 @@
 <!DOCTYPE html><!--  Last Published: Tue Jul 15 2025 12:28:57 GMT+0000 (Coordinated Universal Time)  -->
-<html data-wf-page="6811fc7a1d2462b781d9945e" data-wf-site="6811fc7a1d2462b781d9945b" lang="en">
+<html data-wf-page="6811fc7a1d2462b781d9945e" data-wf-site="6811fc7a1d2462b781d9945b" lang="de">
 
 <head>
   <meta name="generator" content="Hugo 0.152.2">
@@ -125,8 +125,8 @@
         </div>
       </div>
       <div class="division-line"></div>
-      <div class="w-layout-grid grid-2 center margin-top-60 margin-bottom-2-5 mobile-hide">
-        <div><img src="images/ita-flow-uebersicht-1-problem.svg" loading="lazy"
+      <div class="w-layout-grid grid-2 center margin-top-60 margin-bottom-2-5">
+        <div class="graphics-mobile-hide"><img src="images/ita-flow-uebersicht-1-problem.svg" loading="lazy"
             data-w-id="19a90117-dc2f-8216-f6ff-0c727589fbb4"
             alt="Organigramm von Top Management über die Abteilungsleitung zu Team A, Team B und Team C und weiter zum Produkt. Alle Verbindungen sind unterbrochen und jede Unterbrechung mit einem Sperrzeichen markiert."
             class="graphic-1"><img src="images/ita-flow-uebersicht-2-angebot.svg" loading="lazy"
@@ -143,6 +143,16 @@
           <a href="https://calendly.com/it-agile" target="_blank" class="button-primary w-button">Jetzt Analysegespräch
             buchen</a>
         </div>
+      </div>
+    </div>
+  </section>
+  <section id="quick-check" class="section">
+    <div class="container-content">
+      <h2 class="centered">{{ .Params.quickcheck_headline }}<br><span class="red">{{
+          .Params.quickcheck_headline_highlight }}</span></h2>
+      <p class="intro centered limit">{{ .Params.quickcheck_text | safeHTML }}</p>
+      <div class="centered margin-top-30">
+        <a href="{{ "quick-check/" | absURL }}" class="button-primary w-button">{{ .Params.quickcheck_button }}</a>
       </div>
     </div>
   </section>
@@ -201,13 +211,13 @@
           <div class="stretch">
             <div class="wrapper-image-offer"><img src="images/UnserAngebot.png" loading="lazy"
                 sizes="(max-width: 1600px) 100vw, 1600px" srcset="images/UnserAngebot.png"
-                srcset="images/UnserAngebot.png" alt="" class="image-offer"></div>
+                alt="" class="image-offer"></div>
             <h3>Flyer:<br>Unser Flow-Angebot</h3>
             <p class="margin-bottom-0">Unser Flow-Angebot mit dem LASTA-Modell zeigt ganz konkret, wie wir Ihnen helfen
               können.</p>
           </div>
-          <a href="documents/UnserFlowAngebot.pdf" class="button-primary w-button">Angebot
-            downloaden</a>
+          <a href="documents/UnserFlowAngebot.pdf" class="text-link">Angebot als PDF
+            herunterladen</a>
         </div>
         <div id="w-node-b1b35344-9a1d-15c0-a77b-e7c5a5d947bf-81d9945e" class="box-centered _2">
           <div class="stretch">
@@ -217,9 +227,9 @@
                 alt="" class="image-offer"></div>
             <h3>Webinar:<br>teamübergreifende Lieferfähigkeit</h3>
             <p class="margin-bottom-0">Erfahre, wie du Engpässe erkennst, 7x schnellere Time-to-Market erreichst
-              und dabei Budget sparest.<br></p>
+              und dabei Budget sparst.<br></p>
           </div>
-          <a href="{{ .Site.Params.webinar_url }}" target="_blank" class="button-primary w-button">Zum kostenfreien
+          <a href="{{ .Site.Params.webinar_url }}" target="_blank" class="button-secondary w-button">Zum kostenfreien
             Webinar
             anmelden</a>
         </div>
@@ -344,9 +354,16 @@
     <div class="container-content-5">
       {{ $blogData := .Site.GetPage "blog_entries.md" }}
       <h2 class="centered"><strong>{{ $blogData.Title }}</strong></h2>
+      {{/* BAUSTEIN, nicht aktiv. Die Aufmachung dieser Seite wird auch fuer
+          andere Themen genutzt; dann werden solche Bloecke ausgetauscht. Als
+          Template-Kommentar kostet das nichts: Hugo entfernt ihn beim Bauen,
+          im Browser landet kein Byte. Zum Aktivieren die Kommentarzeichen
+          entfernen und die Inhalte anpassen.
+
       <div class="centered hide">
         <a href="#" class="button-secondary-2 w-button">Energie-Klartext-Whitepaper downloaden</a>
       </div>
+      */}}
       <div class="w-layout-grid grid-blog">
         {{ range first 3 $blogData.Params.blog_entries }}
         <a href="{{ .url }}" class="box-centered-2 _2 background-white w-inline-block">
@@ -383,10 +400,22 @@
         </a>
         {{ end }}
       </div>
+      {{/* BAUSTEIN, nicht aktiv. Die Aufmachung dieser Seite wird auch fuer
+          andere Themen genutzt; dann werden solche Bloecke ausgetauscht. Als
+          Template-Kommentar kostet das nichts: Hugo entfernt ihn beim Bauen,
+          im Browser landet kein Byte. Zum Aktivieren die Kommentarzeichen
+          entfernen und die Inhalte anpassen.
+
       <div class="centered margin-top-30 hide">
         <a href="#" class="button-secondary-2 w-button">Zum Blog</a>
       </div>
+      */}}
     </div>
+    {{/* BAUSTEINE, nicht aktiv. Siehe Hinweis oben.
+
+         Zwei Platzhalter-Kacheln fuer Blogbeitraege. Sie tragen absichtlich
+         "DD.MM.JJJJ" und einen Beispieltitel; das ist kein vergessener Rest.
+
     <div class="w-layout-grid grid-3 margin-top-70 margin-bottom-30 _2 hide">
       <div id="w-node-a907e6d1-710f-a5d4-f48d-b4e281bb8b06-81d9945e" class="box-centered-2 _2 background-white">
         <div class="stretch-2">
@@ -419,6 +448,11 @@
         </div>
       </div>
     </div>
+
+         Abschluss-Block. Der Google-Calendar-Link ist NICHT tot: er fuehrt auf
+         den Terminplan zum Thema HIT (High Impact Teams). Fuer diese Seite
+         wird er nicht gebraucht, fuer eine HIT-Themenseite schon.
+
     <div class="margin-top-60-2 centered hide">
       <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ1aVHEHQPezwxviSb5211sju-qxQXuDxpWXsSDOEDJuxVyk5eEv2AIgnhcSZToDJSRb7TZei2E6"
         target="_blank" class="button-primary-2 hide w-button"><strong>Kostenfreies Kennenlernen
@@ -426,6 +460,7 @@
       <div class="spacer-buttons _2"></div>
       <a href="#" class="button-secondary-2 w-button">Alle Beiträge</a>
     </div>
+      */}}
   </section>
   <section data-wf--footer--variant="background-white"
     class="section-footer background-cream w-variant-9ffe0702-0923-d2d4-1f1e-33dc1bae7aff">

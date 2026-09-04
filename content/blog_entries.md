@@ -1,5 +1,12 @@
 ---
 title: "Wissen für teamübergreifende Lieferfähigkeit"
+# Diese Datei ist reine Datenquelle fuer die Startseite und wird ueber
+# .Site.GetPage gelesen. Ohne render:false erzeugt Hugo daraus zusaetzlich
+# die Adresse /blog_entries/, die in der Sitemap steht, aber mangels
+# Layout mit 404 antwortet.
+_build:
+  render: false
+  list: false
 blog_entries:
   - title: "Warum es in IT-Organisationen trotz agiler Teams oft keinen Flow gibt"
     url: "blog/warum-es-in-it-organisationen-trotz-agiler-teams-oft-keinen-flow-gibt/index.html"
@@ -14,9 +21,6 @@ blog_entries:
     url: "blog/wie-sie-den-naechsten-schritt-vom-chaos-zum-flow-machen-ohne-ihr-ganzes-system-umzubauen/index.html"
     image: "images/it-agile-flow-whitepaper.jpg"
     srcset: "images/it-agile-flow-whitepaper-p-500.jpg 500w, images/it-agile-flow-whitepaper-p-800.jpg 800w, images/it-agile-flow-whitepaper-p-1080.jpg 1080w"
-  - title: "Teste eure teamübergreifende Lieferfähigkeit in wenigen Minuten mit unserem Quick Check"
-    url: "quick-check/"
-    image: "images/it-agile-flow-blog-chaos-flow.svg"
 ---
 
 Hier findest du eine Auswahl unserer Blogbeiträge zum Thema Flow und teamübergreifende Lieferfähigkeit:
