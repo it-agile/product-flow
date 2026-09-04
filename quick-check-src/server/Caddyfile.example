@@ -1,0 +1,12 @@
+# Vorlage fuer /etc/caddy/Caddyfile
+#
+# Caddy holt das Zertifikat bei Let's Encrypt selbst und erneuert es selbst.
+# Kein certbot, kein zusaetzlicher Timer. Voraussetzung ist nur, dass der Name
+# auf diese Maschine aufloest und Port 80 und 443 von aussen erreichbar sind.
+#
+# Beim Wechsel auf den endgueltigen Namen hier und in /etc/quick-check.env
+# dieselbe Zeile aendern, dann: systemctl reload caddy
+
+quick-check.it-team-flow.de {
+    reverse_proxy 127.0.0.1:3000
+}

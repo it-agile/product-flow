@@ -8,7 +8,7 @@ Ein Fragebogen, zwei Betriebsarten, **eine Codebasis**.
 | Auswertung | eigenes Profil | Mittelwert der Gruppe, aktualisiert sich laufend |
 | Zugang | Link von `it-team-flow.de` | QR-Code und Raumcode |
 | Kontaktdaten | ja, als Lead | nein |
-| Betrieb | statisch, GitHub Pages | Node-Server, Hetzner |
+| Betrieb | statisch, GitHub Pages | Node-Server, eigene Hetzner-Cloud-Instanz |
 
 Ersetzt das frühere Typeform (`form.typeform.com/to/JiDiDyST`) und die
 SpiderApp aus dem WIEN-IT-Workshop.
@@ -20,31 +20,41 @@ SpiderApp aus dem WIEN-IT-Workshop.
 entsteht im Browser, das Kontaktformular überträgt nichts, und die Seite weist
 darauf hin.
 
-**Teammodus ist gebaut, aber nicht in Betrieb.** Der Code liegt vollständig
-unter `server/`, die Abhängigkeiten sind gepinnt, die Testsuite deckt ihn gegen
-einen wirklich gestarteten Server ab. Es fehlt allein die Inbetriebnahme.
+**Teammodus läuft, unter einem vorläufigen Namen.** Er ist erreichbar unter
+
+```
+https://quick-check.2.28.53.22.sslip.io/quick-check/
+```
+
+Vollständig geprüft: HTTPS mit gültigem Zertifikat, Einreichungen werden
+korrekt gemittelt, Rohdaten nur mit Token, Reset leert den Raum, QR-Code wird
+geliefert. Der Dienst startet nach einem Neustart der Maschine von selbst.
+
+Der Name ist ein Provisorium, siehe „Vom Provisorium zum endgültigen Namen".
+Alles andere ist Dauerbetrieb.
 
 ### Was als Nächstes zu tun ist
 
-1. **Bestandsaufnahme auf dem Server** ausführen, siehe unten. Rein lesend.
-   Die entscheidende offene Frage: steht ein Verwaltungswerkzeug wie Plesk vor
-   dem Apache? Falls ja, sind Eingriffe direkt in den Apache-Dateien der falsche
-   Weg.
-2. **Namen entscheiden**, siehe „Welcher Name für den Dienst?". Kurzfassung:
-   `quick-check.it-agile.de` braucht keinen DNS-Eintrag, weil der Platzhalter
-   der Zone schon auf die Maschine zeigt. `quick-check.it-team-flow.de` verlangt
-   einen eigenen A-Eintrag bei united-domains.
-3. **`ADMIN_TOKEN`** festlegen, lang und zufällig. Ohne gesetztes Token sind
-   `/api/data` und `/api/reset` deaktiviert.
-4. Nach der Inbetriebnahme **`apiBase` in `app/config.solo.js`** auf den Dienst
-   zeigen lassen und `python3 sync.py` ausführen, damit auch der öffentliche
-   Quick Check seine Anfragen dorthin sendet.
+1. **A-Eintrag bei united-domains setzen**: `quick-check` in der Zone
+   `it-team-flow.de` auf `2.28.53.22`. Dafür wird jemand mit Zugang zum
+   united-domains-Konto gebraucht — das ist die einzige verbliebene
+   Abhängigkeit von einer anderen Person.
+2. **Namen umstellen**, zwei Zeilen, siehe unten.
+3. Danach **`apiBase` in `app/config.solo.js`** auf den Dienst zeigen lassen und
+   `python3 sync.py` ausführen, damit auch der öffentliche Quick Check seine
+   Anfragen dorthin sendet. Bewusst noch nicht getan: Solange der Name
+   provisorisch ist, würde die Produktivseite echte Leads an eine Adresse
+   senden, die von einem fremden Gratisdienst abhängt.
 
 ### Was danach noch offen bleibt
 
 - **E-Mail-Benachrichtigung** bei neuen Anfragen. Ohne sie liegt ein Lead in
   `data.json`, bis jemand ihn abholt. Das Vorbild ist das Powermail-Formular auf
   `it-agile.de/kontakt/`, das genau das tut: speichern und benachrichtigen.
+- **Backups.** Bewusst abgeschaltet, weil im Testbetrieb nichts zu verlieren
+  ist. Sobald der Einzelmodus echte Leads schreibt, ist `data.json` die einzige
+  Kopie einer Geschäftsinformation. Dann entweder Hetzner-Backups einschalten
+  oder die Datei täglich wegsichern.
 - **Mindestzahl an Rückmeldungen**, bevor im Teammodus ein Gruppenprofil
   erscheint. Bei drei oder vier Teilnehmenden lassen sich einzelne Antworten aus
   dem Mittelwert zurückrechnen.
@@ -61,12 +71,23 @@ quick-check-src/            <- HIER wird bearbeitet
   app/config.team.js        Konfiguration Teammodus
   server/server.js          Backend
   server/quick-check.service systemd-Unit
+  server/quick-check.env.example  Vorlage der Umgebungsvariablen
+  server/Caddyfile.example  Reverse-Proxy-Konfiguration
   sync.py                   erzeugt beide Deployments
   test/test.js              Testsuite
 
 static/quick-check/index.html              <- ERZEUGT, nicht bearbeiten
-quick-check-src/server/public/             <- ERZEUGT, nicht bearbeiten
+quick-check-src/server/public/             <- ERZEUGT, nicht bearbeiten, nicht im Git
 ```
+
+`static/quick-check/index.html` **muss** committet sein: Hugo kopiert `static/`
+unveraendert durch, GitHub Pages liefert genau diese Datei aus.
+
+`server/public/` dagegen steht in `.gitignore`. Es enthaelt neben der Seite auch
+Kopien der Schriften und des Favicons, also rund zwei Megabyte, die unter
+`static/fonts/` schon liegen. Auf den Server kommt es per `rsync` aus dem
+Arbeitsverzeichnis, nicht aus Git. **Folge: in einem frischen Klon existiert es
+nicht, bis `sync.py` gelaufen ist.**
 
 `sync.py` setzt Konfiguration und Logik in das Markup ein und schreibt zwei
 selbstenthaltene Dateien. Sie unterscheiden sich ausschliesslich im
@@ -119,182 +140,150 @@ apiBase: "https://quick-check.it-team-flow.de"
 ```
 
 Danach `sync.py`. Das Backend muss die Herkunft `https://it-team-flow.de` in
-`ALLOWED_ORIGINS` führen, sonst blockt der Browser die Anfrage.
+`ALLOWED_ORIGINS` führen, sonst blockt der Browser die Anfrage. Erst umstellen,
+wenn der endgültige Name steht.
 
-## Teammodus in Betrieb nehmen
+## Der Server
 
-### Was auf dem Server passiert
+### Warum eine eigene Maschine
 
-Der Dienst hört nur auf `127.0.0.1:3000` hinter einem eigenen Apache-Auftritt
-für eine eigene Subdomain. Er hat einen eigenen Benutzer, ein eigenes
-Datenverzeichnis und schreibt ausschliesslich dorthin. Bestehende Auftritte
-werden nicht angefasst.
+Der ursprüngliche Plan war, den Dienst neben dem TYPO3 auf `162.55.222.147`
+zu betreiben. **Das geht nicht.** Die Maschine ist ein über konsoleH
+verwaltetes Hetzner-Produkt (Reverse-DNS `dedivirt2732.your-server.de`,
+Vertragstyp „Level 19"). Bei dieser Produktklasse betreibt Hetzner das
+Betriebssystem: es gibt kein root, keine eigenen systemd-Dienste, keinen
+Prozess auf einem eigenen Port, und die Apache-Konfiguration wird vom Werkzeug
+erzeugt und würde von Hand eingetragene Änderungen überschreiben.
 
-### Vorbereitung: erst den Bestand aufnehmen
+Der Zugang zu jener Maschine liegt zudem nicht im Team: Weder das
+konsoleH-Konto noch das united-domains-Konto stand zur Verfügung.
 
-Von aussen ist folgendes gesichert (Stand 02.09.2026):
+Eine eigene kleine Cloud-Instanz löst beides und trennt den Eingriff sauber
+vom Produktivauftritt. `it-agile.de`, `it-agile.eu` und Matomo bleiben
+unberührt; ein Rückbau heisst „Maschine löschen".
 
-| Frage | Befund |
+**Verwechslungsgefahr:** Hetzner hat vier verschiedene Oberflächen. Cloud
+Console (`console.hetzner.cloud`) für Cloud-Server, Robot
+(`robot.hetzner.com`) für dedizierte Server, konsoleH
+(`konsoleh.your-server.de`) für Webhosting und Managed Server, DNS Console
+(`dns.hetzner.com`) für Zonen bei Hetzner. Unser Server liegt in der **Cloud
+Console**. Die Zone `it-team-flow.de` liegt bei **united-domains**, nicht bei
+Hetzner — eine Zone in der DNS Console anzulegen wäre wirkungslos und beim
+Umstellen der Nameserver gefährlich, weil dort auch MX und SPF hängen.
+
+### Was läuft
+
+| | |
 |---|---|
-| Maschine | `162.55.222.147`, Hetzner, Rechenzentrum Nürnberg |
-| Webserver | **Apache**, nicht nginx |
-| Was dort läuft | `it-agile.de`, `www.it-agile.de` (TYPO3), `matomo.it-agile.de` |
-| Unbekannte Namen | Apache antwortet mit 404, es gibt also eine Auffang-Konfiguration |
-| Zertifikate | Let's Encrypt für `it-agile.de` und `www.it-agile.de`, kein Platzhalter |
-| DNS `*.it-agile.de` | Platzhalter auf `162.55.222.147`, jede Subdomain landet also schon dort |
-| DNS `*.it-team-flow.de` | Platzhalter auf GitHub Pages, `quick-check.it-team-flow.de` antwortet dort mit 404 |
+| Maschine | `2.28.53.22`, Hetzner Cloud, Rechenzentrum Nürnberg, Name `wompti-quick-check` |
+| System | Debian 13 (trixie), systemd 257 |
+| Node | 20.19.2 aus den Debian-Quellen, kein Fremdrepository |
+| Dienst | systemd-Unit `quick-check`, Benutzer `quickcheck`, Programm in `/opt/quick-check` |
+| Daten | `/var/lib/quick-check/data.json`, `0600`, Verzeichnis `0750` |
+| Umgebung | `/etc/quick-check.env`, `0600` root — hält das Token aus der Unit-Datei heraus |
+| Proxy | Caddy 2.6.2, holt und erneuert das Zertifikat selbsttätig |
+| Firewall | Hetzner Cloud Firewall: eingehend nur 22, 80, 443 und ICMP |
+| SSH | nur Schlüssel, Passwortanmeldung abgeschaltet |
+| Sicherheitsupdates | `unattended-upgrades` aktiv |
 
-Was von aussen **nicht** erkennbar ist und vor dem ersten Eingriff geklärt
-werden muss:
+Der Node-Prozess bindet an `127.0.0.1:3000`, ebenso Caddys Verwaltungsschnitt-
+stelle auf `2019`. Von aussen erreichbar ist ausschliesslich Caddy.
 
-- Betriebssystem und Apache-Version, und damit die Pfade der Konfiguration.
-- Ob Apache von Hand konfiguriert wird oder ein Verwaltungswerkzeug wie Plesk
-  davorsteht. Das ist die wichtigste Frage: Bei Plesk wären Eingriffe direkt in
-  den Apache-Dateien der falsche Weg, sie würden beim nächsten Speichern im
-  Werkzeug überschrieben.
-- Ob Node.js schon installiert ist und in welcher Version.
-- Wer die Maschine administriert und ob Änderungen abgestimmt werden müssen.
+### Neu aufsetzen
 
-Diese Bestandsaufnahme ändert nichts. Auf dem Server ausführen und die Ausgabe
-mitbringen:
+Falls die Maschine einmal neu gebaut werden muss. Vorbedingung: Debian, root
+per SSH-Schlüssel, Firewall auf 22, 80, 443.
 
 ```bash
-# Betriebssystem, Webserver, Node
-cat /etc/os-release | head -2
-apache2 -v 2>/dev/null || httpd -v 2>/dev/null
-node --version 2>/dev/null || echo "kein Node"
-
-# Verwaltungswerkzeug im Spiel?
-which plesk 2>/dev/null && echo "PLESK VORHANDEN"
-ls -d /usr/local/psa /opt/psa /usr/local/cpanel 2>/dev/null
-
-# Wie sind die vorhandenen Auftritte konfiguriert?
-ls /etc/apache2/sites-enabled/ 2>/dev/null || ls /etc/httpd/conf.d/ 2>/dev/null
-
-# Sind die Proxy-Module da, die ein Weiterleiten brauchen?
-apache2ctl -M 2>/dev/null | grep -E "proxy|headers"
-
-# Wie werden die Zertifikate erneuert?
-which certbot && certbot certificates 2>/dev/null | grep -E "Certificate Name|Domains"
-
-# Ist Port 3000 frei?
-ss -tlnp | grep -E ":3000|:80|:443"
+apt-get update && apt-get install -y nodejs npm caddy
+adduser --system --group --no-create-home quickcheck
+mkdir -p /opt/quick-check /var/lib/quick-check
+chown quickcheck:quickcheck /var/lib/quick-check
+chmod 750 /var/lib/quick-check
 ```
 
-### Welcher Name für den Dienst?
-
-Zwei Möglichkeiten, mit unterschiedlichem Aufwand:
-
-**`quick-check.it-agile.de`** — kein DNS-Eintrag nötig, der Platzhalter der Zone
-zeigt bereits auf die Maschine. Das Zertifikat lässt sich sofort ausstellen,
-weil der Name auflöst. Der Quick Check auf `it-team-flow.de` spricht dann eine
-andere Herkunft an; das ist vorgesehen und über `ALLOWED_ORIGINS` abgedeckt.
-
-**`quick-check.it-team-flow.de`** — bleibt in der Marke des Auftritts, verlangt
-aber einen eigenen A-Eintrag bei united-domains auf `162.55.222.147`, der den
-Platzhalter der Zone übersteuert. Erst danach lässt sich ein Zertifikat
-ausstellen.
-
-Der Aufwand spricht für den ersten Namen, die Marke für den zweiten.
-
-### Installation
+Dateien übertragen. Zuerst `sync.py`, sonst fehlt `public/` und der Server
+liefert eine Oberfläche aus, die es nicht gibt. `node_modules` und `data.json`
+bleiben draussen, `public/` kommt mit:
 
 ```bash
-sudo adduser --system --group --no-create-home quickcheck
-sudo mkdir -p /opt/quick-check /var/lib/quick-check
-sudo chown quickcheck:quickcheck /var/lib/quick-check
-
-# Dateien aus quick-check-src/server/ nach /opt/quick-check,
-# public/ mitnehmen, node_modules und data.json nicht:
-rsync -a --exclude node_modules --exclude data.json \
-  quick-check-src/server/ root@162.55.222.147:/opt/quick-check/
-
-cd /opt/quick-check && sudo npm ci --omit=dev
+cd quick-check-src && python3 sync.py && cd ..
+rsync -a --delete --exclude node_modules --exclude data.json \
+  quick-check-src/server/ root@SERVER:/opt/quick-check/
+ssh root@SERVER 'cd /opt/quick-check && npm ci --omit=dev'
 ```
 
-### Dienst
-
-`quick-check.service` nach `/etc/systemd/system/` kopieren und die
-Umgebungsvariablen setzen:
-
-| Variable | Bedeutung |
-|---|---|
-| `ADMIN_TOKEN` | **Pflicht.** Ohne gesetztes Token antworten `/api/data` und `/api/reset` mit 503, statt Daten offenzulegen. Lang und zufällig wählen. |
-| `ALLOWED_ORIGINS` | Erlaubte Herkünfte, Kommaliste. Während der Übergangszeit: `https://rlethmate.github.io,https://it-team-flow.de` |
-| `PUBLIC_URL` | Basis-URL für den QR-Code, also der oben gewählte Name mit `https://`. Ausdrücklich setzen, dann hängt der QR-Code nicht von Kopfzeilen des Proxys ab. |
-| `DATA_FILE` | `/var/lib/quick-check/data.json` |
+`quick-check.env.example` nach `/etc/quick-check.env` kopieren, Werte
+eintragen, `chmod 600`. `quick-check.service` nach `/etc/systemd/system/`,
+`Caddyfile.example` nach `/etc/caddy/Caddyfile`, Namen anpassen.
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now quick-check
-sudo systemctl status quick-check
+systemctl daemon-reload
+systemctl enable --now quick-check
+systemctl reload caddy
 curl -s localhost:3000/api/aggregate   # muss {"room":"default","count":0,...} liefern
 ```
 
-Der Dienst hört nur auf dem Rechner selbst. Bis der Proxy steht, ist er von
-aussen nicht erreichbar.
+### Umgebungsvariablen
 
-### Apache als Vorschaltung
+| Variable | Bedeutung |
+|---|---|
+| `ADMIN_TOKEN` | **Pflicht.** Ohne gesetztes Token antworten `/api/data` und `/api/reset` mit 503, statt Daten offenzulegen. Lang und zufällig wählen. Liegt in `/etc/quick-check.env`, nicht im Repo. |
+| `ALLOWED_ORIGINS` | Erlaubte Herkünfte, Kommaliste. Während der Übergangszeit: `https://rlethmate.github.io,https://it-team-flow.de` |
+| `PUBLIC_URL` | Basis-URL für den QR-Code. Ausdrücklich setzen, dann hängt der QR-Code nicht von Kopfzeilen des Proxys ab. |
+| `DATA_FILE` | `/var/lib/quick-check/data.json` |
+| `HOST` | Standard `127.0.0.1`. Nur setzen, wenn der Dienst bewusst ohne Proxy erreichbar sein soll. |
 
-Eigene Datei, damit nichts Bestehendes angefasst wird. Pfade unter Debian und
-Ubuntu, bei anderen Systemen entsprechend anpassen:
+### Vom Provisorium zum endgültigen Namen
 
-```apache
-# /etc/apache2/sites-available/quick-check.conf
-<VirtualHost *:80>
-    ServerName quick-check.it-agile.de
+`quick-check.2.28.53.22.sslip.io` funktioniert ohne jeden DNS-Eintrag:
+`sslip.io` löst jeden Namen, der eine IP-Adresse enthält, auf genau diese
+Adresse auf. Das genügt für ein echtes Let's-Encrypt-Zertifikat, weil der Name
+nachweislich auf diesen Server zeigt.
 
-    ProxyPreserveHost On
-    ProxyPass        / http://127.0.0.1:3000/
-    ProxyPassReverse / http://127.0.0.1:3000/
-    RequestHeader set X-Forwarded-Proto "http"
+Es ist ein fremder, kostenloser Dienst. Fällt er aus, ist der Name weg. Für
+den Dauerbetrieb taugt das nicht.
 
-    ErrorLog  ${APACHE_LOG_DIR}/quick-check-error.log
-    CustomLog ${APACHE_LOG_DIR}/quick-check-access.log combined
-</VirtualHost>
-```
-
-```bash
-sudo a2enmod proxy proxy_http headers
-sudo a2ensite quick-check
-sudo apache2ctl configtest      # prueft ALLE Auftritte, muss "Syntax OK" sagen
-sudo systemctl reload apache2
-sudo certbot --apache -d quick-check.it-agile.de
-```
-
-`configtest` vor dem Reload ist nicht optional: es ist die Absicherung dagegen,
-dass ein Fehler in der neuen Datei die bestehenden Auftritte mitnimmt. Solange
-`configtest` fehlschlägt, bleibt der alte Zustand aktiv.
-
-Nach `certbot` prüfen, dass der neue Auftritt über HTTPS antwortet und die
-bestehenden Auftritte unverändert laufen:
+Sobald der A-Eintrag `quick-check.it-team-flow.de` → `2.28.53.22` bei
+united-domains steht, sind es zwei Zeilen:
 
 ```bash
-curl -sI https://quick-check.it-agile.de/quick-check/ | head -1
-curl -sI https://www.it-agile.de/            | head -1
-curl -sI https://matomo.it-agile.de/         | head -1
+sed -i 's/quick-check\.2\.28\.53\.22\.sslip\.io/quick-check.it-team-flow.de/' \
+  /etc/caddy/Caddyfile /etc/quick-check.env
+systemctl reload caddy
+systemctl restart quick-check
 ```
+
+Caddy holt das neue Zertifikat von selbst. Danach `apiBase` in
+`app/config.solo.js` setzen, `sync.py` laufen lassen, pushen.
+
+Der Platzhalter der Zone zeigt auf GitHub Pages; ein ausdrücklicher Eintrag für
+`quick-check` hat Vorrang vor ihm.
 
 ### Wieder abbauen
 
-Falls etwas nicht passt, ist der Eingriff vollständig rückbaubar:
+Der Eingriff ist vollständig rückbaubar, weil er auf einer eigenen Maschine
+liegt: In der Cloud Console den Server löschen. Bestehende Auftritte,
+Zertifikate und Konfigurationen sind davon in keiner Weise berührt, weil an
+ihnen nie etwas verändert wurde.
+
+Nur den Dienst entfernen, Maschine behalten:
 
 ```bash
-sudo a2dissite quick-check && sudo systemctl reload apache2
-sudo systemctl disable --now quick-check
-sudo rm /etc/systemd/system/quick-check.service /etc/apache2/sites-available/quick-check.conf
-sudo rm -rf /opt/quick-check /var/lib/quick-check
-sudo deluser quickcheck
+systemctl disable --now quick-check
+rm /etc/systemd/system/quick-check.service /etc/quick-check.env
+rm -rf /opt/quick-check /var/lib/quick-check
+deluser quickcheck
 ```
-
-Bestehende Auftritte, Zertifikate und Konfigurationen bleiben davon unberührt,
-weil nichts von ihnen verändert wurde.
 
 ## Workshop durchführen
 
-1. Raumcode wählen, zum Beispiel den Kundennamen: `wien`.
+1. Raumcode wählen — **nicht nur den Kundennamen**, sondern mit einem nicht
+   erratbaren Zusatz: `wien-4823` statt `wien`. Grund: `GET /api/aggregate` ist
+   öffentlich, wer den Raumcode errät, sieht das Gruppenprofil. Siehe „Offene
+   Punkte". Die Teilnehmenden tippen den Code nie, er steckt im QR-Code.
 2. Moderationsansicht öffnen und projizieren:
-   `https://quick-check.it-team-flow.de/quick-check/?room=wien&present=1`
+   `https://quick-check.2.28.53.22.sslip.io/quick-check/?room=wien-4823&present=1`
    Sie zeigt QR-Code, Adresse, Raumcode, Anzahl der Rückmeldungen und das
    Gruppenprofil. Aktualisierung alle drei Sekunden.
 3. Teilnehmende scannen den QR-Code, beantworten 15 Aussagen und sehen danach
@@ -302,18 +291,21 @@ weil nichts von ihnen verändert wurde.
 4. Nach dem Workshop über die Moderationsansicht zurücksetzen. Das fragt nach
    dem `ADMIN_TOKEN` und leert **nur diesen Raum**.
 
+Nach der Umstellung auf den endgültigen Namen lautet die Adresse
+`https://quick-check.it-team-flow.de/quick-check/?room=wien-4823&present=1`.
+
 Leads aus dem Einzelmodus exportieren:
 
 ```bash
 curl -H "x-admin-token: DEIN-TOKEN" \
-  https://quick-check.it-team-flow.de/api/data?room=default
+  https://quick-check.2.28.53.22.sslip.io/api/data?room=default
 ```
 
 ## API
 
 | Endpunkt | Zugang | Zweck |
 |---|---|---|
-| `POST /api/submit` | öffentlich | Antworten, optional Kontaktdaten. Begrenzt auf 30 Einreichungen je IP in 10 Minuten. |
+| `POST /api/submit` | öffentlich | Antworten, optional Kontaktdaten. Verlangt ein Feld `id`. Begrenzt auf 30 Einreichungen je IP in 10 Minuten. |
 | `GET /api/aggregate?room=` | öffentlich | **nur** Anzahl und Mittelwert je Frage. Keine Rohdaten, keine Kontaktdaten. |
 | `GET /api/qr?room=` | öffentlich | QR-Code als SVG |
 | `GET /api/data` | Token | Rohdaten inklusive Kontaktdaten, optional nach Raum |
@@ -326,10 +318,17 @@ Stelle gemacht werden.
 
 ## Offene Punkte
 
-- **Mindestzahl für Anonymität.** Bei drei oder vier Teilnehmenden lassen sich
-  einzelne Antworten aus dem Mittelwert zurückrechnen. Das Gruppenprofil sollte
-  erst ab einer Mindestzahl von Rückmeldungen erscheinen. Bewusst noch nicht
-  gebaut.
+- **Mindestzahl für Anonymität, und erratbare Raumcodes.** Zwei Punkte, die
+  sich gegenseitig verschärfen. `GET /api/aggregate?room=` ist öffentlich, und
+  zwar mit Absicht: Jede Teilnehmerin fragt ihn ab, um das Gruppenprofil zu
+  sehen. Wer den Raumcode kennt oder errät, sieht es aber ebenso — und bei drei
+  oder vier Teilnehmenden lassen sich einzelne Antworten aus dem Mittelwert
+  zurückrechnen. Ein Aussenstehender könnte so an das Ergebnisprofil eines
+  Kundenworkshops kommen. Zwei Abhilfen, beide bewusst noch nicht gebaut: das
+  Gruppenprofil erst ab einer Mindestzahl von Rückmeldungen zeigen, und
+  Raumcodes serverseitig mit einem Zufallsanteil erzeugen, statt sie frei
+  wählen zu lassen. Bis dahin gilt die Handreichung unter „Workshop
+  durchführen": Raumcode mit nicht erratbarem Zusatz.
 - **Formulierung der Aussagen.** Das Subjekt wechselt zwischen „wir", „eure
   Teams" und „deine Teams"; die Aussagen 13 und 15 fragen mehrere Bedingungen
   gleichzeitig ab. Beides stammt wörtlich aus dem Typeform. Eine Änderung

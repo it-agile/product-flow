@@ -35,6 +35,10 @@
 
   var ROOM = (param("room") || CFG.room || "default").slice(0, 40);
   var PRESENT = MODE === "team" && param("present") === "1";
+  var TRAINER = MODE === "team" && param("trainer") === "1";
+
+  var TOKEN_KEY = "lasta-quick-check-admin-token";
+  var ROOMS_KEY = "lasta-quick-check-rooms";
 
   // =====================================================================
   // FRAGEBOGEN
@@ -211,6 +215,44 @@
 
   function clearDraft() {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { }
+  }
+
+  /* Token und Raumliste liegen nur im Browser des Trainers. Nichts davon geht
+   * an den Server; der kennt weder Geraete noch Sitzungen. */
+  function readToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
+  }
+
+  function writeToken(t) {
+    try { localStorage.setItem(TOKEN_KEY, t); } catch (e) { }
+  }
+
+  function clearToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) { }
+  }
+
+  function readRooms() {
+    try {
+      var a = JSON.parse(localStorage.getItem(ROOMS_KEY) || "[]");
+      return Array.isArray(a) ? a.filter(function (r) { return typeof r === "string" && r; }) : [];
+    } catch (e) { return []; }
+  }
+
+  function forgetRoom(room) {
+    try {
+      localStorage.setItem(ROOMS_KEY, JSON.stringify(readRooms().filter(function (r) {
+        return r !== room;
+      })));
+    } catch (e) { }
+  }
+
+  function rememberRoom(room) {
+    if (!room || room === "default") return;
+    try {
+      var a = readRooms().filter(function (r) { return r !== room; });
+      a.unshift(room);
+      localStorage.setItem(ROOMS_KEY, JSON.stringify(a.slice(0, 8)));
+    } catch (e) { }
   }
 
   function api(path) { return API + path; }
@@ -477,7 +519,8 @@
   var submitted = false;
   var groupData = null;   // { count, avg } aus /api/aggregate
   var pollTimer = null;
-  var SCREENS = ["screen-intro", "screen-questions", "screen-contact", "screen-result", "screen-present"];
+  var SCREENS = ["screen-intro", "screen-questions", "screen-contact", "screen-result", "screen-present",
+    "screen-trainer"];
 
   function show(id) {
     SCREENS.forEach(function (s) { $(s).hidden = s !== id; });
@@ -497,7 +540,9 @@
     } else {
       stepsEl.hidden = true;
       $("progress").textContent = id === "screen-contact" ? "Kontaktdaten"
-        : (id === "screen-result" ? "Ergebnis" : (id === "screen-present" ? "Moderation" : ""));
+        : (id === "screen-result" ? "Ergebnis"
+          : (id === "screen-present" ? "Moderation"
+            : (id === "screen-trainer" ? "Vorbereitung" : "")));
     }
     updateCounter();
   }
@@ -903,25 +948,194 @@
     show("screen-intro");
   });
 
-  $("btn-reset").addEventListener("click", function () {
-    var token = window.prompt("Admin-Token für das Zurücksetzen des Raums „" + ROOM + "“:");
-    if (token === null) return;
-    var msg = $("present-msg");
+  /* Zuruecksetzen, gemeinsam fuer Moderationsansicht und Trainerseite.
+   * Ist das Token auf diesem Geraet hinterlegt, genuegt eine Rueckfrage. Sonst
+   * danach fragen und es bei Erfolg merken, damit es das naechste Mal nicht
+   * mitten im Workshop herausgesucht werden muss. */
+  function resetRoom(room, report, done) {
+    var stored = readToken();
+    var token;
+    if (stored) {
+      if (!window.confirm("Raum „" + room + "“ zurücksetzen? Alle Rückmeldungen dieses "
+        + "Raums werden gelöscht. Andere Räume bleiben unberührt.")) return;
+      token = stored;
+    } else {
+      token = window.prompt("Admin-Token für das Zurücksetzen des Raums „" + room + "“:");
+      if (token === null) return;
+    }
     fetch(api("/api/reset"), {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-token": token },
-      body: JSON.stringify({ room: ROOM })
+      body: JSON.stringify({ room: room })
     }).then(function (r) {
-      msg.hidden = false;
-      msg.textContent = r.ok
-        ? "Raum zurückgesetzt."
-        : (r.status === 401 ? "Token abgelehnt." : "Zurücksetzen fehlgeschlagen (HTTP " + r.status + ").");
-      if (r.ok) loadAggregate();
+      if (r.ok) {
+        if (!stored) writeToken(token);
+        report("Raum „" + room + "“ zurückgesetzt.");
+        if (done) done();
+      } else if (r.status === 401) {
+        // Ein gemerktes Token, das abgelehnt wird, ist veraltet: weg damit.
+        if (stored) {
+          clearToken();
+          report("Gemerktes Token abgelehnt und vom Gerät gelöscht. Bitte erneut versuchen.");
+        } else {
+          report("Token abgelehnt.");
+        }
+      } else {
+        report("Zurücksetzen fehlgeschlagen (HTTP " + r.status + ").");
+      }
     }).catch(function () {
-      msg.hidden = false;
-      msg.textContent = "Backend nicht erreichbar.";
+      report("Backend nicht erreichbar.");
     });
+  }
+
+  $("btn-reset").addEventListener("click", function () {
+    var msg = $("present-msg");
+    resetRoom(ROOM, function (text) {
+      msg.hidden = false;
+      msg.textContent = text;
+    }, loadAggregate);
   });
+
+  // =====================================================================
+  // TRAINERSEITE
+  // =====================================================================
+
+  function roomUrl(room) {
+    return window.location.pathname + "?room=" + encodeURIComponent(room) + "&present=1";
+  }
+
+  function roomsReport(text) {
+    var msg = $("trainer-rooms-msg");
+    msg.hidden = false;
+    msg.textContent = text;
+  }
+
+  function renderTrainerRecent() {
+    var box = $("trainer-recent");
+    box.innerHTML = "";
+    var rooms = readRooms();
+    if (!rooms.length) {
+      var p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = "Noch keine. Sobald du eine Moderationsansicht öffnest, "
+        + "erscheint der Raum hier.";
+      box.appendChild(p);
+      return;
+    }
+    var ul = document.createElement("ul");
+    ul.className = "trainer-rooms";
+    rooms.forEach(function (r) {
+      var li = document.createElement("li");
+
+      var a = document.createElement("a");
+      a.href = roomUrl(r);
+      a.textContent = r;
+
+      var span = document.createElement("span");
+      span.className = "muted";
+      span.textContent = "wird geladen …";
+
+      var spacer = document.createElement("span");
+      spacer.className = "spacer";
+
+      var btnReset = document.createElement("button");
+      btnReset.type = "button";
+      btnReset.className = "btn-link";
+      btnReset.textContent = "Zurücksetzen";
+      btnReset.addEventListener("click", function () {
+        // Nach dem Zuruecksetzen neu zeichnen, damit die Anzahl stimmt.
+        resetRoom(r, roomsReport, renderTrainerRecent);
+      });
+
+      var btnForget = document.createElement("button");
+      btnForget.type = "button";
+      btnForget.className = "btn-link";
+      btnForget.textContent = "Aus Liste entfernen";
+      btnForget.addEventListener("click", function () {
+        forgetRoom(r);
+        roomsReport("Raum „" + r + "“ aus der Liste entfernt. Die Daten auf dem "
+          + "Server sind unverändert.");
+        renderTrainerRecent();
+      });
+
+      li.appendChild(a);
+      li.appendChild(span);
+      li.appendChild(spacer);
+      li.appendChild(btnReset);
+      li.appendChild(btnForget);
+      ul.appendChild(li);
+
+      // Anzahl je Raum nachladen, damit erkennbar ist, welcher noch Daten haelt.
+      fetchJson(api("/api/aggregate?room=" + encodeURIComponent(r))).then(function (d) {
+        var n = (d && typeof d.count === "number") ? d.count : 0;
+        span.textContent = n === 1 ? "1 Rückmeldung" : n + " Rückmeldungen";
+      }).catch(function () {
+        span.textContent = "Anzahl nicht abrufbar";
+      });
+    });
+    box.appendChild(ul);
+  }
+
+  /* Macht sichtbar, ob ein Token hinterlegt ist. Ohne diese Anzeige laesst sich
+   * nicht unterscheiden, ob das Feld leer ist oder nur nicht angezeigt wird. */
+  function updateTokenState() {
+    $("trainer-token-state").textContent = readToken()
+      ? "Auf diesem Gerät hinterlegt. Zurücksetzen verlangt nur noch eine Bestätigung."
+      : "Nicht hinterlegt. Zurücksetzen fragt jedes Mal nach dem Token.";
+  }
+
+  function initTrainer() {
+    var roomInput = $("trainer-room");
+    roomInput.value = param("room") || "";
+
+    $("btn-trainer-dice").addEventListener("click", function () {
+      // Vorhandenen Zufallszusatz ersetzen statt anhaengen, sonst wachsen die
+      // Codes bei mehrfachem Klicken.
+      var base = roomInput.value.trim().replace(/-\d{4}$/, "");
+      if (!base) { roomInput.focus(); return; }
+      roomInput.value = (base + "-" + String(Math.floor(1000 + Math.random() * 9000))).slice(0, 40);
+    });
+
+    $("btn-trainer-open").addEventListener("click", function () {
+      var room = roomInput.value.trim().slice(0, 40);
+      var msg = $("trainer-msg");
+      if (!room) {
+        msg.hidden = false;
+        msg.textContent = "Bitte einen Raumcode eingeben.";
+        return;
+      }
+      if (room === "default") {
+        msg.hidden = false;
+        msg.textContent = "„default“ ist der Raum des Einzelmodus, in dem die Anfragen "
+          + "liegen. Bitte einen anderen Code wählen.";
+        return;
+      }
+      rememberRoom(room);
+      window.location.href = roomUrl(room);
+    });
+
+    $("trainer-token").value = readToken();
+    $("btn-trainer-token-save").addEventListener("click", function () {
+      var t = $("trainer-token").value.trim();
+      var msg = $("trainer-token-msg");
+      msg.hidden = false;
+      if (!t) { msg.textContent = "Kein Token eingegeben."; return; }
+      writeToken(t);
+      msg.textContent = "Token in diesem Browser gemerkt.";
+      updateTokenState();
+    });
+    $("btn-trainer-token-clear").addEventListener("click", function () {
+      clearToken();
+      $("trainer-token").value = "";
+      var msg = $("trainer-token-msg");
+      msg.hidden = false;
+      msg.textContent = "Token von diesem Gerät gelöscht.";
+      updateTokenState();
+    });
+
+    updateTokenState();
+    renderTrainerRecent();
+  }
 
   // =====================================================================
   // START
@@ -935,7 +1149,11 @@
 
   renderStep();
 
-  if (PRESENT) {
+  if (TRAINER) {
+    initTrainer();
+    show("screen-trainer");
+  } else if (PRESENT) {
+    rememberRoom(ROOM);
     document.getElementById("main").classList.add("wide");
     renderPresent();
     show("screen-present");

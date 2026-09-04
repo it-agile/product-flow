@@ -38,6 +38,9 @@ const QRCode = require("qrcode");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+/* Nur auf dem Rechner selbst lauschen. Von aussen erreichbar ist der Dienst
+ * ausschliesslich ueber den Reverse Proxy. HOST=0.0.0.0 hebt das bewusst auf. */
+const HOST = process.env.HOST || "127.0.0.1";
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
@@ -268,8 +271,8 @@ app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] })
 
 app.get("/", (req, res) => res.redirect("/quick-check/"));
 
-app.listen(PORT, () => {
-  console.log("Quick-Check-Backend hört auf Port " + PORT);
+app.listen(PORT, HOST, () => {
+  console.log("Quick-Check-Backend hört auf " + HOST + ":" + PORT);
   if (!ADMIN_TOKEN) {
     console.warn("WARNUNG: ADMIN_TOKEN ist nicht gesetzt. /api/data und /api/reset sind deaktiviert.");
   }

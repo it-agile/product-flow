@@ -1,3 +1,11 @@
 node_modules/
 data.json
 data.json.tmp
+
+# public/ erzeugt sync.py aus app/ und static/: die fertige Seite plus Kopien
+# der Schriften und des Favicons. Alles davon ist Ausgabe, kein Quelltext. Im
+# Repository blaeht es jeden Diff auf und liegt doppelt vor, denn dieselben
+# Schriften stehen schon unter static/fonts/.
+# Ausgeliefert wird es per rsync aus dem Arbeitsverzeichnis, nicht aus Git.
+# Deshalb vor dem ersten rsync auf einen frischen Klon: python3 sync.py
+public/

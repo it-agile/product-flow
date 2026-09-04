@@ -796,6 +796,24 @@
       }
     }
 
+    .trainer-rooms {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .trainer-rooms li {
+      padding: 6px 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 2px 12px;
+    }
+
+    .trainer-rooms li .spacer {
+      flex: 1 1 auto;
+    }
+
     .join-box {
       text-align: center;
     }
@@ -1039,6 +1057,10 @@
             <div class="actions" style="justify-content:center">
               <button class="btn-link" type="button" id="btn-reset">Raum zurücksetzen</button>
             </div>
+            <p class="muted" style="margin-top:2px;margin-bottom:0">Leert <strong>nur
+              diesen Raum</strong>. Andere Räume und die Anfragen aus dem Einzelmodus
+              bleiben unberührt. Verlangt das Admin-Token; auf der
+              <a href="?trainer=1">Trainerseite</a> lässt es sich einmalig hinterlegen.</p>
             <div class="notice" id="present-msg" hidden></div>
           </div>
           <div>
@@ -1060,6 +1082,51 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ============ Trainerseite (nur Teammodus, ?trainer=1) ============ -->
+    <section id="screen-trainer" hidden>
+      <div class="card">
+        <h1>Workshop vorbereiten</h1>
+        <p class="lead">Raumcode festlegen und die Moderationsansicht öffnen. Diese Seite
+          lässt sich als Lesezeichen speichern.</p>
+
+        <div class="field">
+          <label for="trainer-room">Raumcode</label>
+          <input type="text" id="trainer-room" maxlength="40" placeholder="z. B. wien-4823"
+            autocomplete="off" autocapitalize="none" spellcheck="false">
+          <div class="hint">Nicht nur den Kundennamen nehmen. Das Gruppenprofil ist ohne
+            Anmeldung abrufbar – wer den Code errät, sieht es. Der Zufallszusatz erledigt
+            das; die Teilnehmenden tippen den Code ohnehin nie, er steckt im QR-Code.</div>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button" id="btn-trainer-open">Moderationsansicht öffnen</button>
+          <button class="btn btn-secondary" type="button" id="btn-trainer-dice">Zufallszusatz anhängen</button>
+        </div>
+        <div class="notice" id="trainer-msg" hidden></div>
+
+        <h2>Zuletzt benutzt</h2>
+        <p class="muted">„Zurücksetzen“ löscht die Rückmeldungen des Raums auf dem
+          Server und wirkt für alle. „Aus Liste entfernen“ betrifft nur diese Ansicht
+          hier; die Daten auf dem Server bleiben davon unberührt.</p>
+        <div id="trainer-recent"></div>
+        <div class="notice" id="trainer-rooms-msg" hidden></div>
+
+        <h2>Admin-Token</h2>
+        <p class="muted">Einmal hinterlegen, dann verlangt „Raum zurücksetzen“ nur noch
+          eine Bestätigung. Das Token bleibt in diesem Browser und wird nirgendwohin
+          übertragen. Auf fremder Hardware hinterher löschen.</p>
+        <div class="field">
+          <label for="trainer-token">Token</label>
+          <input type="password" id="trainer-token" autocomplete="off" spellcheck="false">
+          <div class="hint" id="trainer-token-state"></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" type="button" id="btn-trainer-token-save">Token merken</button>
+          <button class="btn-link" type="button" id="btn-trainer-token-clear">Token von diesem Gerät löschen</button>
+        </div>
+        <div class="notice" id="trainer-token-msg" hidden></div>
       </div>
     </section>
   </main>
