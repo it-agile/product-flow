@@ -534,7 +534,11 @@
       $("progress").textContent = "Dimension " + (step + 1) + " von " + DIMENSIONS.length;
       stepsEl.hidden = false;
       stepsEl.innerHTML = DIMENSIONS.map(function (d, i) {
-        var cls = i === step ? "current" : (isStepComplete(i) ? "done" : "");
+        /* Erledigt schlaegt aktuell: sonst bleibt der Balken, auf dem man steht,
+         * dunkel, obwohl seine Fragen beantwortet sind -- auf der letzten
+         * Dimension sichtbar als ein schwarzer Balken neben vier orangen. Wo man
+         * ist, sagt ohnehin die Zeile "Dimension X von 5" darueber. */
+        var cls = isStepComplete(i) ? "done" : (i === step ? "current" : "");
         return '<li class="' + cls + '"></li>';
       }).join("");
     } else {

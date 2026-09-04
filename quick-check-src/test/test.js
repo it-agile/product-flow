@@ -448,6 +448,21 @@ async function main() {
       [...d2.querySelectorAll("#steps li")].map(l => l.className).slice(0, 2).join("|") === "done|done");
   }
 
+  /* Der Balken der Dimension, auf der man gerade steht, blieb dunkel, auch wenn
+   * ihre Fragen beantwortet waren. Auf der letzten Dimension sah das aus wie ein
+   * vergessener Schritt: vier orange Balken und ein schwarzer. */
+  {
+    const { doc, win } = boot(soloHtml);
+    $(doc, "btn-start").click();
+    answerCurrentStep(doc, win, 4);
+    const klassen = () => [...doc.querySelectorAll("#steps li")].map((l) => l.className);
+    check("beantwortete Dimension ist erledigt, auch wenn man auf ihr steht",
+      klassen()[0] === "done", klassen());
+    for (let i = 1; i < 5; i++) { next(doc, win); answerCurrentStep(doc, win, 4); }
+    check("auf der letzten Dimension sind alle fuenf Balken erledigt",
+      klassen().join("|") === "done|done|done|done|done", klassen());
+  }
+
   section("[9] Teammodus: Gruppenmittelwert und eigene Antworten");
   const aggregate = (count, perDim) => {
     const questions = {};
