@@ -1,4 +1,4 @@
-/* Prüfung des LASTA Quick Check: Einzelmodus, Teammodus, Backend.
+/* Prüfung des ATLAS Quick Check: Einzelmodus, Teammodus, Backend.
  *
  * Einmalig einrichten (jsdom bewusst ausserhalb des Dropbox-Ordners, sonst
  * synchronisiert Dropbox tausende Dateien):
@@ -24,6 +24,16 @@ const SERVER_DIR = path.join(SRC, "server");
 const soloHtml = fs.readFileSync(SOLO_FILE, "utf8");
 const teamHtml = fs.readFileSync(TEAM_FILE, "utf8");
 
+/* Der ausgelieferte Einzelmodus zeigt seit dem 15.09.2026 auf das Backend.
+ * Geprüft werden müssen aber beide Zustände: mit Backend (die Anfrage geht
+ * hinaus) und ohne (Testbetrieb, es geht nichts hinaus). Deshalb wird apiBase
+ * im erzeugten Markup ersetzt, statt sich auf den ausgelieferten Wert zu
+ * verlassen. Aendert sich der Name des Dienstes, faellt das hier auf: die
+ * Ersetzung greift dann nicht mehr, und "Konfiguration für den Test ersetzbar"
+ * schlaegt fehl. */
+const SOLO_API = "https://atlas-quick-check.it-agile.de";
+const soloWith = api => soloHtml.replace('apiBase: "' + SOLO_API + '"', 'apiBase: "' + api + '"');
+
 let pass = 0, fail = 0;
 function check(name, cond, extra) {
   if (cond) { pass++; console.log("  ok   " + name); }
@@ -31,7 +41,15 @@ function check(name, cond, extra) {
 }
 function section(t) { console.log("\n" + t); }
 
-const DIMS = ["Leadership", "Alignment", "Steuerung", "Teams", "Architektur"];
+/* Anzeigereihenfolge: so wird abgefragt und so stehen die Achsen. Ergibt das
+ * Merkwort ATLAS. Entspricht DIMENSIONS in app/app.js. */
+const DIMS = ["Alignment", "Teams", "Leadership", "Architektur", "Steuerung"];
+
+/* Speicherreihenfolge: so sind die Aussagen im Fragebogen gruppiert, daraus
+ * entstehen die Kennungen q0…q14 (je drei Aussagen). Entspricht QUESTIONS in
+ * app/app.js und ist bewusst eine ANDERE Reihenfolge als DIMS. Verschöbe man
+ * sie, bekämen bereits erhobene Antworten eine neue Bedeutung. */
+const QUESTION_DIMS = ["Leadership", "Alignment", "Steuerung", "Teams", "Architektur"];
 const $ = (doc, id) => doc.getElementById(id);
 const visible = (doc, id) => !$(doc, id).hidden;
 const flat = v => ({ Leadership: v, Alignment: v, Steuerung: v, Teams: v, Architektur: v });
@@ -51,7 +69,7 @@ function boot(html, opts) {
       window.scrollTo = function () {};
       window.print = function () { window.__printed = true; };
       window.prompt = function () { return opts.promptValue !== undefined ? opts.promptValue : "tok"; };
-      if (opts.seedDraft) window.localStorage.setItem("lasta-quick-check-draft", JSON.stringify(opts.seedDraft));
+      if (opts.seedDraft) window.localStorage.setItem("atlas-quick-check-draft", JSON.stringify(opts.seedDraft));
       window.fetch = function (url, init) {
         calls.push({ url: String(url), init: init || {} });
         if (opts.fetchImpl) return opts.fetchImpl(String(url), init || {});
@@ -128,6 +146,13 @@ section("[1] sync.py: beide Ziele stammen aus einer Quelle");
     !/<script[^>]+src=/.test(soloHtml) && !/<script[^>]+src=/.test(teamHtml));
   check("Platzhalter vollständig ersetzt",
     !soloHtml.includes("<!--QC_APP-->") && !teamHtml.includes("<!--QC_CONFIG-->"));
+  /* Ein leeres apiBase im Einzelmodus hiesse: das Kontaktformular sammelt
+   * Leads ein, die nirgends ankommen. Der Hinweis auf der Seite sagt dann
+   * zwar die Wahrheit, aber die Absicht ist eine andere. */
+  check("Einzelmodus zeigt auf das Backend",
+    soloHtml.includes('apiBase: "' + SOLO_API + '"'), SOLO_API);
+  check("Teammodus bleibt bei gleicher Herkunft",
+    teamHtml.includes('apiBase: ""'));
 
   const fontDir = path.join(SERVER_DIR, "public", "fonts");
   ["NotoSans-Regular.ttf", "NotoSans-Bold.ttf", "SourceSans3-Regular.ttf", "SourceSans3-Bold.ttf"]
@@ -153,21 +178,35 @@ section("[2] Einzelmodus: fünf Schritte");
     !$(doc, "screen-questions").textContent.includes("Wie Entscheidungen getroffen und Teams"));
 
   const seen = [];
+  const gesehene = {};
   for (let i = 0; i < 5; i++) {
     seen.push($(doc, "dim-title").textContent);
-    answerCurrentStep(doc, win, 3);
+    gesehene[$(doc, "dim-title").textContent] = answerCurrentStep(doc, win, 3);
     if (i === 4) check("letzter Button führt zu Kontaktdaten",
       $(doc, "btn-next").textContent.includes("Kontaktdaten"));
     next(doc, win);
   }
-  check("LASTA-Reihenfolge", JSON.stringify(seen) === JSON.stringify(DIMS), seen);
+  check("ATLAS-Reihenfolge", JSON.stringify(seen) === JSON.stringify(DIMS), seen);
+
+  /* Der Kern der Umstellung vom 15.09.2026: Die Dimensionen werden in der
+   * Reihenfolge ATLAS abgefragt, die Kennungen q0…q14 folgen aber weiterhin
+   * der Reihenfolge der Aussagen. Nur deshalb bleiben bereits erhobene
+   * Antworten vergleichbar. Verschiebt jemand QUESTIONS in app.js, schlaegt
+   * diese Pruefung fehl -- und das ist ihr ganzer Zweck. */
+  const erwartet = {};
+  QUESTION_DIMS.forEach((d, i) => { erwartet[d] = ["q" + (i * 3), "q" + (i * 3 + 1), "q" + (i * 3 + 2)]; });
+  check("Kennungen q0…q14 folgen den Aussagen, nicht der Anzeige",
+    JSON.stringify(gesehene) === JSON.stringify(
+      DIMS.reduce((o, d) => { o[d] = erwartet[d]; return o; }, {})), gesehene);
+  check("Anzeige- und Speicherreihenfolge sind wirklich verschieden",
+    JSON.stringify(DIMS) !== JSON.stringify(QUESTION_DIMS));
   check("Kontakt-Screen erreicht", visible(doc, "screen-contact"));
 }
 {
   const { doc, win } = boot(soloHtml);
   $(doc, "btn-start").click();
   next(doc, win);
-  check("Weiter ohne Antworten blockiert", $(doc, "dim-title").textContent === "Leadership");
+  check("Weiter ohne Antworten blockiert", $(doc, "dim-title").textContent === DIMS[0]);
   check("Fehlerhinweis nennt 3 offene", $(doc, "questions-error").textContent.includes("3"));
   answerCurrentStep(doc, win, 5);
   next(doc, win);
@@ -185,7 +224,7 @@ section("[2] Einzelmodus: fünf Schritte");
 section("[3] Einzelmodus: Ergebnis, Mittelwert als Leitgröße");
 {
   const { doc } = runSolo(MIXED);
-  check("Titel Einzelprofil", $(doc, "result-title").textContent === "Dein LASTA-Profil");
+  check("Titel Einzelprofil", $(doc, "result-title").textContent === "Dein ATLAS-Profil");
   const lead = $(doc, "result-lead").textContent;
   check("Gesamtmittel 3,0 von 5", lead.includes("3,0 von 5"), lead);
   check("Gesamt-Pille teilweise wirksam",
@@ -195,8 +234,9 @@ section("[3] Einzelmodus: Ergebnis, Mittelwert als Leitgröße");
   check("schwächste Dimension", lead.includes("Hebel siehst du bei Architektur"));
 
   const nums = [...doc.querySelectorAll("#scores-body td.num")].map(t => t.textContent.replace(/\s+/g, " ").trim());
-  check("Mittelwerte 5,0 bis 1,0",
-    JSON.stringify(nums) === JSON.stringify(["5,0 von 5", "4,0 von 5", "3,0 von 5", "2,0 von 5", "1,0 von 5"]), nums);
+  // Die Tabelle folgt der Anzeigereihenfolge, nicht der Hoehe der Werte.
+  check("Mittelwerte in der Reihenfolge der Dimensionen",
+    JSON.stringify(nums) === JSON.stringify(DIMS.map(d => MIXED[d].toFixed(1).replace(".", ",") + " von 5")), nums);
   check("Tabellenkopf Dimension/Mittelwert/Einordnung",
     [...doc.querySelectorAll("#scores-head th")].map(t => t.textContent).join("|") ===
     "Dimension|Mittelwert|Einordnung");
@@ -235,10 +275,14 @@ section("[4] Zonen, Zielscheibe, Balken");
   check("Werte an den Achsen", doc.querySelectorAll("#radar text tspan").length === 5);
   const pts = doc.querySelector('#radar polygon[fill^="rgba"]').getAttribute("points")
     .split(" ").map(p => p.split(",").map(Number));
-  check("Leadership 5,0 oben am Aussenring",
-    Math.abs(pts[0][0] - 260) < 0.5 && Math.abs(pts[0][1] - 95) < 0.5, pts[0]);
+  const ptOf = d => pts[DIMS.indexOf(d)];
+  const radiusOf = d => Math.hypot(ptOf(d)[0] - 260, ptOf(d)[1] - 220);
+  check("erste Dimension liegt oben",
+    Math.abs(ptOf(DIMS[0])[0] - 260) < 0.5 && ptOf(DIMS[0])[1] < 220, ptOf(DIMS[0]));
+  check("Leadership 5,0 am Aussenring seiner Achse",
+    Math.abs(radiusOf("Leadership") - 125) < 0.6, ptOf("Leadership"));
   check("Architektur 1,0 bei einem Fünftel",
-    Math.abs(Math.hypot(pts[4][0] - 260, pts[4][1] - 220) - 25) < 0.6);
+    Math.abs(radiusOf("Architektur") - 25) < 0.6);
   check("aria-label mit Werten und Einordnung",
     svg.getAttribute("aria-label").includes("Leadership 5,0 von 5, wirksam") &&
     svg.getAttribute("aria-label").includes("Architektur 1,0 von 5, Entwicklungsfeld"),
@@ -258,8 +302,9 @@ section("[4] Zonen, Zielscheibe, Balken");
   check("Balken je Dimension", bars.length === 5);
   check("Zonenbreiten 40/40/20",
     [...bars[0].querySelectorAll(".bar-zone")].map(z => z.style.width).join("|") === "40%|40%|20%");
-  check("Marke bei 5,0 rechts", bars[0].querySelector(".bar-mark").style.left === "100%");
-  check("Marke bei 3,0 bei 60%", bars[2].querySelector(".bar-mark").style.left === "60%");
+  const barOf = d => bars[DIMS.indexOf(d)];
+  check("Marke bei 5,0 rechts", barOf("Leadership").querySelector(".bar-mark").style.left === "100%");
+  check("Marke bei 3,0 bei 60%", barOf("Steuerung").querySelector(".bar-mark").style.left === "60%");
 }
 
 // ================================================================
@@ -268,10 +313,10 @@ section("[5] Gleichstände und Gesamtbewertung");
   const a = runSolo({ Leadership: 5, Alignment: 5, Steuerung: 3, Teams: 1, Architektur: 1 });
   const lead = $(a.doc, "result-lead").textContent;
   check("beide schwächsten genannt", lead.includes("Teams und Architektur"));
-  check("beide stärksten genannt", lead.includes("Leadership und Alignment"));
+  check("beide stärksten genannt", lead.includes("Alignment und Leadership"));
   check("Plural", lead.includes("Am stärksten sind"));
   const b = runSolo({ Leadership: 5, Alignment: 4, Steuerung: 2, Teams: 2, Architektur: 2 });
-  check("drei mit Komma und und", $(b.doc, "result-lead").textContent.includes("Steuerung, Teams und Architektur"));
+  check("drei mit Komma und und", $(b.doc, "result-lead").textContent.includes("Teams, Architektur und Steuerung"));
   const c = runSolo(flat(3));
   check("kein Hebel bei Gleichstand", $(c.doc, "result-lead").textContent.includes("Alle Dimensionen liegen gleich hoch"));
 
@@ -365,10 +410,11 @@ async function main() {
     submitContact(doc, win);
     check("ungültige E-Mail blockiert", !$(doc, "err-email").hidden);
     $(doc, "btn-back-questions").click();
-    check("Zurück zur letzten Dimension", $(doc, "dim-title").textContent === "Architektur");
+    check("Zurück zur letzten Dimension", $(doc, "dim-title").textContent === DIMS[DIMS.length - 1]);
   }
   {
-    const { doc, win, calls } = boot(soloHtml);
+    const noApi = soloWith("");
+    const { doc, win, calls } = boot(noApi);
     answerAllSteps(doc, win, MIXED);
     fillContact(doc, win);
     submitContact(doc, win);
@@ -377,8 +423,7 @@ async function main() {
     check("Testbetriebs-Hinweis", $(doc, "result-notes").textContent.includes("Testbetrieb"));
   }
   {
-    const withApi = soloHtml.replace('apiBase: "",\n  askForContact: true',
-      'apiBase: "https://qc.example.org",\n  askForContact: true');
+    const withApi = soloWith("https://qc.example.org");
     check("Konfiguration für den Test ersetzbar", withApi !== soloHtml);
     const { doc, win, calls } = boot(withApi);
     answerAllSteps(doc, win, MIXED);
@@ -404,7 +449,7 @@ async function main() {
     check("Erfolgs-Hinweis", $(doc, "result-notes").textContent.includes("Danke"));
   }
   {
-    const withApi = soloHtml.replace('apiBase: ""', 'apiBase: "https://qc.example.org"');
+    const withApi = soloWith("https://qc.example.org");
     const { doc, win } = boot(withApi, {
       fetchImpl: () => Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
     });
@@ -437,13 +482,13 @@ async function main() {
     const one = doc.querySelector("#questions input[value='2']");
     one.checked = true;
     one.dispatchEvent(new win.Event("change", { bubbles: true }));
-    const stored = JSON.parse(win.localStorage.getItem("lasta-quick-check-draft"));
+    const stored = JSON.parse(win.localStorage.getItem("atlas-quick-check-draft"));
     check("7 Antworten gespeichert", Object.keys(stored.answers).length === 7);
     const { doc: d2 } = boot(soloHtml, { seedDraft: stored });
     check("Fortsetzen sichtbar", !$(d2, "btn-resume").hidden);
     check("nennt Anzahl", $(d2, "btn-resume").textContent.includes("7 von 15"));
     $(d2, "btn-resume").click();
-    check("springt zu Steuerung", $(d2, "dim-title").textContent === "Steuerung");
+    check("springt zur dritten Dimension", $(d2, "dim-title").textContent === DIMS[2], DIMS[2]);
     check("erledigte Schritte markiert",
       [...d2.querySelectorAll("#steps li")].map(l => l.className).slice(0, 2).join("|") === "done|done");
   }
@@ -464,21 +509,29 @@ async function main() {
   }
 
   section("[9] Teammodus: Gruppenmittelwert und eigene Antworten");
+  /* Baut eine Antwort von /api/aggregate nach. Die Kennungen q0…q14 folgen der
+   * Reihenfolge der AUSSAGEN (QUESTION_DIMS), nicht der Anzeigereihenfolge der
+   * Dimensionen (DIMS). Wer hier DIMS einsetzt, prüft die App gegen eine
+   * Umdeutung der gespeicherten Daten und merkt es nicht. */
   const aggregate = (count, perDim) => {
     const questions = {};
-    for (let i = 0; i < 15; i++) questions["q" + i] = perDim[DIMS[Math.floor(i / 3)]];
+    for (let i = 0; i < 15; i++) questions["q" + i] = perDim[QUESTION_DIMS[Math.floor(i / 3)]];
     return { room: "default", count, questions };
   };
+  // Gruppenwerte je Dimension. Die Erwartungen unten werden daraus abgeleitet,
+  // damit sie eine Umstellung der Anzeigereihenfolge ueberleben.
+  const GRUPPE = { Leadership: 4, Alignment: 3, Steuerung: 2, Teams: 5, Architektur: 1 };
+  const etikett = v => v >= 4 ? "wirksam" : (v >= 2 ? "teilweise wirksam" : "Entwicklungsfeld");
   {
     const teamFetch = (url) => {
       if (url.indexOf("/api/aggregate") !== -1) {
         return Promise.resolve({ ok: true, status: 200,
-          json: () => Promise.resolve(aggregate(4, { Leadership: 4, Alignment: 3, Steuerung: 2, Teams: 5, Architektur: 1 })) });
+          json: () => Promise.resolve(aggregate(4, GRUPPE)) });
       }
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
     };
     const { doc, win, calls } = boot(teamHtml, {
-      url: "https://quick-check.it-team-flow.de/quick-check/?room=wien", fetchImpl: teamFetch
+      url: "https://atlas-quick-check.it-agile.de/quick-check/?room=kunde", fetchImpl: teamFetch
     });
     check("Intro nennt gemeinsames Profil",
       $(doc, "intro-note").textContent.includes("gemeinsamen Profil"));
@@ -494,14 +547,14 @@ async function main() {
     check("Antworten gesendet", submit.length === 1, calls.map(c => c.url));
     if (submit.length) {
       const body = JSON.parse(submit[0].init.body);
-      check("Raum aus der URL übernommen", body.room === "wien", body.room);
+      check("Raum aus der URL übernommen", body.room === "kunde", body.room);
       check("keine Kontaktdaten im Teammodus", body.contact === undefined);
       check("relative API-URL bei gleicher Herkunft", submit[0].url === "/api/submit", submit[0].url);
     }
     check("Aggregat abgefragt",
-      calls.some(c => c.url === "/api/aggregate?room=wien"), calls.map(c => c.url));
+      calls.some(c => c.url === "/api/aggregate?room=kunde"), calls.map(c => c.url));
 
-    check("Titel Gruppenprofil", $(doc, "result-title").textContent === "LASTA-Profil der Gruppe");
+    check("Titel Gruppenprofil", $(doc, "result-title").textContent === "ATLAS-Profil der Gruppe");
     const lead = $(doc, "result-lead").textContent;
     check("Gruppenmittel 3,0 von 5", lead.includes("3,0 von 5"), lead);
     check("stärkste Dimension der Gruppe ist Teams", lead.includes("Am stärksten ist Teams"), lead);
@@ -509,10 +562,13 @@ async function main() {
 
     const head = [...doc.querySelectorAll("#scores-head th")].map(t => t.textContent).join("|");
     check("Tabelle mit Gruppe und Du", head === "Dimension|Gruppe|Du|Einordnung", head);
-    const first = [...doc.querySelectorAll("#scores-body tr")[0].querySelectorAll("td.num")]
-      .map(t => t.textContent.replace(/\s+/g, " ").trim());
+    const zeile = d => [...[...doc.querySelectorAll("#scores-body tr")][DIMS.indexOf(d)]
+      .querySelectorAll("td.num")].map(t => t.textContent.replace(/\s+/g, " ").trim());
     check("Leadership: Gruppe 4,0 und eigener Wert 5,0",
-      first[0] === "4,0 von 5" && first[1] === "5,0", first);
+      zeile("Leadership")[0] === "4,0 von 5" && zeile("Leadership")[1] === "5,0", zeile("Leadership"));
+    check("erste Zeile ist die erste Dimension",
+      [...doc.querySelectorAll("#scores-body tr")][0].querySelector("th, td").textContent.trim()
+        .startsWith(DIMS[0]), DIMS[0]);
 
     check("zwei Messreihen in der Zielscheibe",
       doc.querySelectorAll("#radar polygon[stroke='#ea5d12']").length === 1 &&
@@ -539,7 +595,7 @@ async function main() {
         .some(h => h.textContent.trim().startsWith("Teams")));
     check("Etiketten im Teammodus",
       [...doc.querySelectorAll("#scores-body .pill")].map(p => p.textContent.trim()).join("|") ===
-      "wirksam|teilweise wirksam|teilweise wirksam|wirksam|Entwicklungsfeld",
+      DIMS.map(d => etikett(GRUPPE[d])).join("|"),
       [...doc.querySelectorAll("#scores-body .pill")].map(p => p.textContent.trim()));
     check("Zähler zeigt 4 Rückmeldungen", $(doc, "counter").textContent === "4 Rückmeldungen");
     check("Hinweis nennt Anzahl", $(doc, "result-notes").textContent.includes("4 Rückmeldungen"));
@@ -556,25 +612,25 @@ async function main() {
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true }) });
     };
     const { doc, win, calls } = boot(teamHtml, {
-      url: "https://quick-check.it-team-flow.de/quick-check/?room=wien&present=1", fetchImpl: teamFetch
+      url: "https://atlas-quick-check.it-agile.de/quick-check/?room=kunde&present=1", fetchImpl: teamFetch
     });
     await new Promise(r => setTimeout(r, 40));
     check("Moderationsansicht sichtbar", visible(doc, "screen-present"));
     check("keine Fragen in der Moderationsansicht", !visible(doc, "screen-questions"));
-    check("Raumcode angezeigt", $(doc, "present-room").textContent === "wien");
+    check("Raumcode angezeigt", $(doc, "present-room").textContent === "kunde");
     check("Beitrittsadresse ohne Schema",
-      $(doc, "present-url").textContent === "quick-check.it-team-flow.de/quick-check/?room=wien",
+      $(doc, "present-url").textContent === "atlas-quick-check.it-agile.de/quick-check/?room=kunde",
       $(doc, "present-url").textContent);
     const img = doc.querySelector("#present-qr img");
     check("QR-Code als Bild eingebunden", !!img);
-    check("QR-Endpunkt mit Raum", img.getAttribute("src") === "/api/qr?room=wien", img && img.getAttribute("src"));
+    check("QR-Endpunkt mit Raum", img.getAttribute("src") === "/api/qr?room=kunde", img && img.getAttribute("src"));
     check("QR-Bild mit Alternativtext", img.getAttribute("alt").length > 5);
     check("Anzahl gross dargestellt", $(doc, "present-count").textContent === "7");
     check("Gruppenprofil gezeichnet", !!doc.querySelector("#present-radar svg"));
     check("Tabelle der Moderationsansicht gefüllt",
       doc.querySelectorAll("#present-scores tr").length === 5);
     check("Layout breiter geschaltet", doc.getElementById("main").classList.contains("wide"));
-    check("Aggregat abgefragt", calls.some(c => c.url === "/api/aggregate?room=wien"));
+    check("Aggregat abgefragt", calls.some(c => c.url === "/api/aggregate?room=kunde"));
 
     $(doc, "btn-reset").click();
     await new Promise(r => setTimeout(r, 30));
@@ -582,12 +638,12 @@ async function main() {
     check("Zurücksetzen sendet Token im Header",
       reset.length === 1 && reset[0].init.headers["x-admin-token"] === "tok", reset.length);
     check("Zurücksetzen nennt den Raum",
-      reset.length === 1 && JSON.parse(reset[0].init.body).room === "wien");
+      reset.length === 1 && JSON.parse(reset[0].init.body).room === "kunde");
     win.close();
   }
   {
     const { doc, win } = boot(teamHtml, {
-      url: "https://qc.example.org/quick-check/?room=wien&present=1",
+      url: "https://qc.example.org/quick-check/?room=kunde&present=1",
       promptValue: null,
       fetchImpl: () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(aggregate(0, flat(0))) })
     });
@@ -611,7 +667,7 @@ async function main() {
     env: Object.assign({}, process.env, {
       PORT: String(PORT), DATA_FILE: DATA, ADMIN_TOKEN: TOKEN,
       ALLOWED_ORIGINS: "https://it-team-flow.de",
-      PUBLIC_URL: "https://quick-check.it-team-flow.de"
+      PUBLIC_URL: "https://atlas-quick-check.it-agile.de"
     }),
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -644,13 +700,13 @@ async function main() {
       body: JSON.stringify(body)
     });
 
-    let r = await post("/api/submit", { id: "a1", room: "wien", answers: answersFor(4) });
+    let r = await post("/api/submit", { id: "a1", room: "kunde", answers: answersFor(4) });
     check("gültige Einreichung angenommen", r.status === 200 && (await r.json()).ok === true);
 
-    r = await post("/api/submit", { id: "a1", room: "wien", answers: answersFor(2) });
+    r = await post("/api/submit", { id: "a1", room: "kunde", answers: answersFor(2) });
     check("gleiche id wird nicht doppelt gezählt", (await r.json()).alreadyExists === true);
 
-    r = await post("/api/submit", { id: "a2", room: "wien", answers: answersFor(2) });
+    r = await post("/api/submit", { id: "a2", room: "kunde", answers: answersFor(2) });
     check("zweite Einreichung angenommen", r.status === 200);
 
     r = await post("/api/submit", { id: "b1", room: "hamburg", answers: answersFor(5) });
@@ -671,7 +727,7 @@ async function main() {
     r = await post("/api/submit", { answers: answersFor(3) });
     check("abgelehnt: fehlende id", r.status === 400);
 
-    r = await fetch(base + "/api/aggregate?room=wien");
+    r = await fetch(base + "/api/aggregate?room=kunde");
     const agg = await r.json();
     check("Aggregat zählt 2 Rückmeldungen", agg.count === 2, agg.count);
     check("Aggregat mittelt je Frage korrekt", agg.questions.q0 === 3 && agg.questions.q14 === 3, agg.questions.q0);
@@ -701,6 +757,47 @@ async function main() {
 
     r = await post("/api/submit", { id: "lead2", answers: answersFor(3), contact: "kein objekt" });
     check("abgelehnt: Kontaktdaten kein Objekt", r.status === 400, r.status);
+
+    /* Einwilligung und E-Mail-Adresse prueft der Server selbst. Das Formular
+     * tut es auch, aber ein Formular ist keine Zugangskontrolle: ein Aufruf
+     * daran vorbei darf keine personenbezogenen Daten in die Datei schreiben. */
+    r = await post("/api/submit", {
+      id: "lead3", answers: answersFor(3),
+      contact: { firstname: "A", lastname: "B", email: "a@b.de", consent: false }
+    });
+    check("abgelehnt: Kontaktdaten ohne Einwilligung",
+      r.status === 400 && (await r.json()).error === "consent_required", r.status);
+
+    r = await post("/api/submit", {
+      id: "lead4", answers: answersFor(3),
+      contact: { firstname: "A", lastname: "B", email: "a@b.de" }
+    });
+    check("abgelehnt: Einwilligung fehlt ganz", r.status === 400, r.status);
+
+    for (const [label, mail] of [
+      ["leer", ""], ["ohne @", "keine-mail"], ["ohne Punkt", "a@b"],
+      ["mit Leerzeichen", "a b@c.de"], ["fehlt ganz", undefined]
+    ]) {
+      const res = await post("/api/submit", {
+        id: "mail-" + label, answers: answersFor(3),
+        contact: { firstname: "A", lastname: "B", email: mail, consent: true }
+      });
+      check("abgelehnt: E-Mail " + label,
+        res.status === 400 && (await res.json()).error === "invalid_email", res.status);
+    }
+
+    /* Ein Zeilenumbruch in Name oder E-Mail waere in einer Mail-Kopfzeile
+     * gefaehrlich, im Freitext dagegen normal. */
+    r = await post("/api/submit", {
+      id: "lead5", room: "public", answers: answersFor(3),
+      contact: {
+        firstname: "Eva\r\nBcc: fremd@example.org", lastname: "M",
+        email: "eva@example.org", consent: true,
+        message: "Zeile eins\r\nZeile zwei\u0007"
+      },
+      source: "quelle\nmit Umbruch"
+    });
+    check("Einreichung mit Steuerzeichen angenommen", r.status === 200, r.status);
 
     r = await fetch(base + "/api/data");
     check("Rohdaten ohne Token abgelehnt", r.status === 401, r.status);
@@ -736,18 +833,39 @@ async function main() {
     check("nicht gesendete Felder fehlen einfach",
       l2 && l2.contact.phone === undefined && l2 && l2.contact.topic === undefined);
 
-    r = await fetch(base + "/api/data?room=wien", { headers: { "x-admin-token": TOKEN } });
+    const d5 = await (await fetch(base + "/api/data?room=public",
+      { headers: { "x-admin-token": TOKEN } })).json();
+    const l5 = d5.submissions.find(x => x.id === "lead5");
+    check("Zeilenumbruch aus dem Namen entfernt",
+      l5 && l5.contact.firstname === "EvaBcc: fremd@example.org", l5 && l5.contact.firstname);
+    check("Zeilenumbruch aus der Quelle entfernt",
+      l5 && l5.source === "quellemit Umbruch", l5 && l5.source);
+    check("Zeilenumbruch im Freitext bleibt erhalten",
+      l5 && l5.contact.message === "Zeile eins\nZeile zwei", l5 && l5.contact.message);
+    check("abgelehnte Kontaktdaten stehen nicht in der Datei",
+      !d5.submissions.some(x => /^(lead3|lead4|mail-)/.test(x.id)) &&
+      !(await (await fetch(base + "/api/data", { headers: { "x-admin-token": TOKEN } })).json())
+        .submissions.some(x => /^(lead3|lead4|mail-)/.test(x.id)));
+
+    /* Dieser Server laeuft ohne NOTIFY_*. Genau dann muss er sagen, dass
+     * Anfragen liegen bleiben, statt es stillschweigend zu tun. */
+    check("Warnung: keine Benachrichtigung eingerichtet",
+      srvOut.includes("Keine Benachrichtigung bei neuen Anfragen"), srvOut.slice(0, 400));
+    check("Versandstand vermerkt, dass nicht gemeldet wurde",
+      lead && lead.notify === "aus", lead && lead.notify);
+
+    r = await fetch(base + "/api/data?room=kunde", { headers: { "x-admin-token": TOKEN } });
     check("Rohdaten nach Raum filterbar", (await r.json()).count === 2);
 
     // QR-Code
-    r = await fetch(base + "/api/qr?room=wien");
+    r = await fetch(base + "/api/qr?room=kunde");
     const svgText = await r.text();
     check("QR-Code ausgeliefert", r.status === 200);
     check("QR als SVG", (r.headers.get("content-type") || "").indexOf("image/svg+xml") === 0,
       r.headers.get("content-type"));
     check("QR enthält SVG-Inhalt", svgText.indexOf("<svg") !== -1 && svgText.indexOf("</svg>") !== -1);
     check("QR hat Modulraster", /viewBox="0 0 (\d+) \1"/.test(svgText), svgText.slice(0, 120));
-    const svg2 = await (await fetch(base + "/api/qr?room=wien")).text();
+    const svg2 = await (await fetch(base + "/api/qr?room=kunde")).text();
     check("QR ist für denselben Raum stabil", svgText === svg2);
     const svg3 = await (await fetch(base + "/api/qr?room=hamburg")).text();
     check("QR unterscheidet sich je Raum", svgText !== svg3);
@@ -777,12 +895,12 @@ async function main() {
       r.status + " " + r.headers.get("location"));
 
     // Zurücksetzen
-    r = await post("/api/reset", { room: "wien" });
+    r = await post("/api/reset", { room: "kunde" });
     check("Zurücksetzen ohne Token abgelehnt", r.status === 401);
-    r = await post("/api/reset", { room: "wien" }, { "x-admin-token": TOKEN });
+    r = await post("/api/reset", { room: "kunde" }, { "x-admin-token": TOKEN });
     check("Raum zurückgesetzt", r.status === 200);
     check("nur dieser Raum ist leer",
-      (await (await fetch(base + "/api/aggregate?room=wien")).json()).count === 0 &&
+      (await (await fetch(base + "/api/aggregate?room=kunde")).json()).count === 0 &&
       (await (await fetch(base + "/api/aggregate?room=hamburg")).json()).count === 1);
     r = await post("/api/reset", { room: "*" }, { "x-admin-token": TOKEN });
     check("Alles zurücksetzen", r.status === 200 && (await r.json()).remaining === 0);
@@ -827,7 +945,115 @@ async function main() {
     try { fs.unlinkSync(DATA2); } catch (e) { }
   }
 
-  section("[13] Kontaktformular deckt sich mit it-agile.de/kontakt/");
+  section("[13] Benachrichtigung bei neuen Anfragen");
+  {
+    /* Geprueft wird im Probelauf: NOTIFY_DRY_RUN schreibt die Mail auf die
+     * Ausgabe, statt sie zu versenden. So braucht die Pruefung keinen
+     * Postausgangsserver und verschickt nichts. Genau dieser Schalter dient
+     * auch beim Einrichten auf dem Server dazu, den Inhalt einmal anzusehen. */
+    const PORT3 = PORT + 2;
+    const DATA3 = DATA + ".3";
+    const srv3 = spawn(process.execPath, ["server.js"], {
+      cwd: SERVER_DIR,
+      env: Object.assign({}, process.env, {
+        PORT: String(PORT3), DATA_FILE: DATA3, ADMIN_TOKEN: TOKEN,
+        PUBLIC_URL: "https://atlas-quick-check.it-agile.de",
+        NOTIFY_TO: "flow@it-agile.de, zweite@it-agile.de",
+        NOTIFY_FROM: "quick-check@it-agile.de",
+        NOTIFY_DRY_RUN: "1"
+      }),
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let out3 = "";
+    srv3.stdout.on("data", d => { out3 += d; });
+    srv3.stderr.on("data", d => { out3 += d; });
+
+    const b3 = "http://127.0.0.1:" + PORT3;
+    let up3 = false;
+    for (let i = 0; i < 60; i++) {
+      try { if ((await fetch(b3 + "/api/aggregate")).ok) { up3 = true; break; } } catch (e) { }
+      await new Promise(r => setTimeout(r, 100));
+    }
+    check("Server mit Benachrichtigung gestartet", up3, out3.slice(0, 300));
+
+    if (up3) {
+      check("Probelauf im Protokoll angekuendigt",
+        out3.includes("Benachrichtigung im Probelauf"), out3.slice(0, 300));
+      check("keine Warnung ueber fehlende Benachrichtigung",
+        !out3.includes("Keine Benachrichtigung bei neuen Anfragen"));
+
+      const post3 = (body) => fetch(b3 + "/api/submit", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const alle = {};
+      for (let i = 0; i < 15; i++) alle["q" + i] = 4;
+      const daten3 = () => fetch(b3 + "/api/data", { headers: { "x-admin-token": TOKEN } })
+        .then(r => r.json());
+
+      let r = await post3({
+        id: "n1", room: "public", answers: alle,
+        source: "it-team-flow.de/quick-check",
+        contact: {
+          firstname: "Eva", lastname: "Muster", email: "eva@example.org",
+          phone: "040 123456", company: "Beispiel GmbH", topic: "Bitte um Beratung",
+          message: "Wir stocken zwischen vier Teams.", consent: true
+        }
+      });
+      check("Anfrage angenommen", r.status === 200, r.status);
+
+      // Der Versand laeuft absichtlich erst nach der Antwort. Kurz warten.
+      await new Promise(r2 => setTimeout(r2, 300));
+
+      check("Mail geht an beide Empfaenger",
+        out3.includes("An: flow@it-agile.de, zweite@it-agile.de"), out3.slice(-600));
+      check("Antwort geht an die anfragende Person",
+        out3.includes("Antwort an: eva@example.org"));
+      check("Betreff nennt den Namen",
+        out3.includes("Betreff: Quick Check: Anfrage von Eva Muster"));
+      check("Mail nennt Telefon und Unternehmen",
+        out3.includes("040 123456") && out3.includes("Beispiel GmbH"));
+      check("Mail nennt das Anliegen", out3.includes("Bitte um Beratung"));
+      check("Mail enthaelt den Freitext", out3.includes("Wir stocken zwischen vier Teams."));
+      check("Mail nennt die Quelle", out3.includes("it-team-flow.de/quick-check"));
+      check("Mail nennt den Weg zum Profil", out3.includes("/api/data"));
+      /* Der Server kennt den Fragebogen nicht. Wuerde er Antworten in die Mail
+       * schreiben, waeren es nackte Zahlen ohne die Fragen dazu. */
+      check("Mail deutet die Antworten nicht", !out3.includes("q0"));
+
+      const n1 = (await daten3()).submissions.find(x => x.id === "n1");
+      check("Versandstand als probelauf vermerkt", n1 && n1.notify === "probelauf",
+        n1 && n1.notify);
+
+      // Teammodus: eine Antwort ohne Kontaktdaten ist keine Anfrage.
+      const vorher = out3.length;
+      r = await post3({ id: "n2", room: "kunde", answers: alle });
+      await new Promise(r2 => setTimeout(r2, 300));
+      check("Antwort ohne Kontaktdaten loest keine Mail aus",
+        r.status === 200 && out3.length === vorher, out3.slice(vorher));
+      const n2 = (await daten3()).submissions.find(x => x.id === "n2");
+      check("kein Versandstand ohne Kontaktdaten", n2 && n2.notify === undefined,
+        n2 && n2.notify);
+
+      // Fehlende Felder duerfen die Mail nicht zerreissen.
+      r = await post3({
+        id: "n3", room: "public", answers: alle,
+        contact: { email: "knapp@example.org", consent: true }
+      });
+      await new Promise(r2 => setTimeout(r2, 300));
+      check("Anfrage nur mit E-Mail angenommen", r.status === 200, r.status);
+      check("Betreff faellt auf die E-Mail-Adresse zurueck",
+        out3.includes("Betreff: Quick Check: Anfrage von knapp@example.org"), out3.slice(-600));
+      check("leere Felder als Gedankenstrich", out3.includes("Telefon:      \u2014"),
+        out3.slice(-600));
+      check("fehlender Freitext benannt", out3.includes("(keine)"));
+    }
+
+    srv3.kill("SIGTERM");
+    try { fs.unlinkSync(DATA3); } catch (e) { }
+  }
+
+  section("[14] Kontaktformular deckt sich mit it-agile.de/kontakt/");
   {
     const { doc } = boot(soloHtml);
     const label = (id) => (doc.querySelector('label[for="' + id + '"]') || {}).textContent || "";
@@ -871,9 +1097,42 @@ async function main() {
     // Felder, die es dort NICHT gibt, sind auch hier weg
     check("kein Rollenfeld mehr", !doc.getElementById("c-role"));
     check("kein Teamanzahl-Feld mehr", !doc.getElementById("c-teams"));
+
+    /* Der Einwilligungstext verweist auf die Datenschutzerklaerung. Dann muss
+     * dort auch etwas ueber den Quick Check stehen, und zwar dasselbe, was die
+     * App tatsaechlich tut. Ohne diese Pruefung faellt es niemandem auf, wenn
+     * das Formular ein Feld dazubekommt und die Erklaerung es nicht nennt. */
+    const ds = fs.readFileSync(path.join(REPO, "content", "datenschutz.md"), "utf8");
+    const dsStart = ds.indexOf("<h3>ATLAS Quick Check</h3>");
+    check("Datenschutzerklärung hat einen Abschnitt zum Quick Check", dsStart !== -1);
+    const dsAbschnitt = dsStart === -1 ? "" : ds.slice(dsStart, ds.indexOf("<h3>", dsStart + 4));
+
+    check("nennt die Einwilligung als Rechtsgrundlage",
+      dsAbschnitt.includes("Art. 6 Abs. 1 lit. a DSGVO"));
+    check("nennt den Widerruf", /widerruf/i.test(dsAbschnitt));
+    check("nennt die Speicherdauer", dsAbschnitt.includes("Speicherdauer"));
+    check("nennt den Auftragsverarbeiter", dsAbschnitt.includes("Hetzner Online GmbH"));
+    check("nennt den Server, an den übertragen wird",
+      dsAbschnitt.includes("atlas-quick-check.it-agile.de"));
+    check("nennt den Einsatz in Workshops", /Workshop/.test(dsAbschnitt));
+
+    [["c-firstname", "Vorname"], ["c-lastname", "Nachname"], ["c-email", "E-Mail-Adresse"],
+     ["c-phone", "Telefonnummer"], ["c-company", "Unternehmen"], ["c-topic", "Anliegen"],
+     ["c-message", "Nachricht"]].forEach(([id, wort]) => {
+      check("Datenschutzerklärung nennt " + id + " als „" + wort + "“",
+        dsAbschnitt.includes(wort));
+    });
+
+    /* Der Entwurf liegt im Browser. Aendert sich der Schluessel im Code, steht
+     * in der Datenschutzerklaerung ein falscher. */
+    const entwurfsschluessel = (soloHtml.match(/var STORAGE_KEY = "([^"]+)"/) || [])[1];
+    check("Schlüssel des Entwurfsspeichers im Code gefunden",
+      !!entwurfsschluessel, entwurfsschluessel);
+    check("Datenschutzerklärung nennt genau diesen Schlüssel",
+      !!entwurfsschluessel && dsAbschnitt.includes(entwurfsschluessel), entwurfsschluessel);
   }
 
-  section("[14] Webinar-Verweis der Landingpage");
+  section("[15] Webinar-Verweis der Landingpage");
   {
     /* Die sechs Webinar-Schaltflaechen ziehen ihre Adresse aus einer einzigen
      * Einstellung. Der Zoom-Link war tot (HTTP 404) und ist auskommentiert,
@@ -906,7 +1165,7 @@ async function main() {
     });
   }
 
-  section("[15] Auffindbarkeit und Linkvorschau des Quick Checks");
+  section("[16] Auffindbarkeit und Linkvorschau des Quick Checks");
   {
     const { doc } = boot(soloHtml);
     const meta = (sel) => (doc.querySelector(sel) || {}).content;
@@ -974,7 +1233,7 @@ async function main() {
     }
   }
 
-  section("[16] Übersichtsgrafiken der Startseite");
+  section("[17] Übersichtsgrafiken der Startseite");
   {
     const idx = fs.readFileSync(path.join(REPO, "layouts", "index.html"), "utf8");
     const css = fs.readFileSync(path.join(REPO, "static", "css",
@@ -1022,7 +1281,7 @@ async function main() {
     });
   }
 
-  section("[17] Fremdnetze und Skripte der Landingpage");
+  section("[18] Fremdnetze und Skripte der Landingpage");
   {
     const crypto = require("crypto");
     const lies = (rel) => fs.readFileSync(path.join(REPO, rel), "utf8");
@@ -1084,7 +1343,7 @@ async function main() {
       });
   }
 
-  section("[18] Verlinkungen, Assets, Barrierefreiheit");
+  section("[19] Verlinkungen, Assets, Barrierefreiheit");
   {
     const { doc } = boot(soloHtml);
 
