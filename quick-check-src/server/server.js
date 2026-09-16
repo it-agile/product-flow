@@ -228,9 +228,42 @@ function mailer() {
   return transport;
 }
 
-/* Der Server kennt den Fragebogen nicht und deutet die Antworten deshalb auch
- * in der Mail nicht. Sie enthält, was zum Antworten nötig ist; das Profil holt
- * man über /api/data. */
+/* Zuordnung der Antworten zu den Dimensionen. Je drei Aussagen, in der
+ * Reihenfolge von QUESTIONS in quick-check-src/app/app.js -- daraus entstehen
+ * die Kennungen q0…q14. Der Server braucht sie allein, um die Mail lesbar zu
+ * machen; gespeichert wird weiterhin unverändert. Die Liste ist eine
+ * Verdopplung aus app.js, eine Prüfung in Abschnitt [13] der Testsuite hält
+ * beide zusammen. Wer QUESTIONS umsortiert, deutet damit alle Altdaten um. */
+const QUESTION_DIMS = ["Leadership", "Alignment", "Steuerung", "Teams", "Architektur"];
+const PRO_DIMENSION = 3;
+
+/* Anzeigereihenfolge, sie ergibt das Merkwort ATLAS -- absichtlich eine andere
+ * als die Speicherreihenfolge darüber. */
+const DIM_ORDER = ["Alignment", "Teams", "Leadership", "Architektur", "Steuerung"];
+
+/* Mittelwert je Dimension, eine Nachkommastelle mit Komma, so wie die Zahl auch
+ * in der Zielscheibe steht, die die anfragende Person gesehen hat. Eine
+ * fehlende Antwort zählt nicht mit; fehlen alle einer Dimension, bleibt der
+ * Gedankenstrich. */
+function dimAverages(answers) {
+  const summe = {}, anzahl = {};
+  QUESTION_DIMS.forEach((dim, gruppe) => {
+    for (let k = 0; k < PRO_DIMENSION; k++) {
+      const wert = answers ? answers["q" + (gruppe * PRO_DIMENSION + k)] : undefined;
+      if (typeof wert !== "number") continue;
+      summe[dim] = (summe[dim] || 0) + wert;
+      anzahl[dim] = (anzahl[dim] || 0) + 1;
+    }
+  });
+  return DIM_ORDER.map((dim) => ({
+    dim: dim,
+    wert: anzahl[dim] ? (summe[dim] / anzahl[dim]).toFixed(1).replace(".", ",") : null
+  }));
+}
+
+/* Die Mail enthält, was zum Antworten nötig ist, dazu das Profil als Mittelwert
+ * je Dimension. Die einzelnen Antworten bleiben draußen: nackte Zahlen ohne die
+ * Aussagen dazu sagen nichts. Sie holt man über /api/data. */
 function leadMail(entry) {
   const c = entry.contact || {};
   const name = [c.firstname, c.lastname].filter(Boolean).join(" ");
@@ -246,6 +279,9 @@ function leadMail(entry) {
     row("Unternehmen:", c.company),
     row("Anliegen:", c.topic),
     "",
+    "ATLAS-Profil, Mittelwert je Dimension (1 bis 5):",
+    ...dimAverages(entry.answers).map((a) => row(a.dim + ":", a.wert)),
+    "",
     "Nachricht:",
     c.message || "(keine)",
     "",
@@ -257,7 +293,7 @@ function leadMail(entry) {
     row("Kennung:", entry.id),
     "",
     "Die Einwilligung liegt vor, sonst wäre die Anfrage nicht angenommen worden.",
-    "Das ATLAS-Profil dazu liefert GET /api/data" +
+    "Die einzelnen Antworten liefert GET /api/data" +
       (PUBLIC_URL ? " auf " + PUBLIC_URL : "") + ", dafür wird das Admin-Token gebraucht."
   ];
 

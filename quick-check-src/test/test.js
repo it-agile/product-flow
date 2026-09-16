@@ -1017,13 +1017,54 @@ async function main() {
       check("Mail enthaelt den Freitext", out3.includes("Wir stocken zwischen vier Teams."));
       check("Mail nennt die Quelle", out3.includes("it-team-flow.de/quick-check"));
       check("Mail nennt den Weg zum Profil", out3.includes("/api/data"));
-      /* Der Server kennt den Fragebogen nicht. Wuerde er Antworten in die Mail
-       * schreiben, waeren es nackte Zahlen ohne die Fragen dazu. */
-      check("Mail deutet die Antworten nicht", !out3.includes("q0"));
+      /* Rohe Fragekennungen gehoeren nicht in die Mail: nackte Zahlen ohne die
+       * Aussagen dazu sagen nichts. Gedeutet wird je Dimension. */
+      check("Mail nennt keine rohen Fragekennungen", !out3.includes("q0"));
+      check("Mail nennt das Profil je Dimension",
+        out3.includes("ATLAS-Profil"), out3.slice(-800));
+      /* Alle Antworten stehen auf 4, also muss jede Dimension 4,0 zeigen. */
+      check("Mittelwert je Dimension in der Mail",
+        DIMS.every(d => out3.includes(d + ":" + " ".repeat(Math.max(1, 14 - (d + ":").length)) + "4,0")),
+        out3.slice(-800));
 
       const n1 = (await daten3()).submissions.find(x => x.id === "n1");
       check("Versandstand als probelauf vermerkt", n1 && n1.notify === "probelauf",
         n1 && n1.notify);
+
+      /* Die Zuordnung q0…q14 zu den Dimensionen steht doppelt: als QUESTIONS in
+       * app/app.js und als QUESTION_DIMS in server/server.js. Laufen die beiden
+       * auseinander, deutet die Mail die Antworten still falsch -- niemandem
+       * faellt das auf, weil die Zahlen plausibel bleiben. */
+      const serverSrc = fs.readFileSync(path.join(SERVER_DIR, "server.js"), "utf8");
+      const treffer = serverSrc.match(/const QUESTION_DIMS = \[([^\]]*)\]/);
+      const serverDims = treffer
+        ? treffer[1].split(",").map(x => x.trim().replace(/"/g, "")).filter(Boolean) : [];
+      check("Zuordnung im Server deckt sich mit dem Fragebogen",
+        JSON.stringify(serverDims) === JSON.stringify(QUESTION_DIMS), serverDims);
+
+      /* Je Dimension ein anderer Wert: erst damit zeigt sich, ob die Mail die
+       * richtige Kennung der richtigen Dimension zuordnet. Gleiche Werte
+       * ueberall wuerden jede Verwechslung verbergen. */
+      const verschieden = {};
+      QUESTION_DIMS.forEach((dim, g) => {
+        const wert = 5 - g;
+        for (let k = 0; k < 3; k++) verschieden["q" + (g * 3 + k)] = wert;
+      });
+      const vorProfil = out3.length;
+      await post3({
+        id: "n4", room: "public", answers: verschieden,
+        contact: { email: "profil@example.org", consent: true }
+      });
+      await new Promise(r2 => setTimeout(r2, 300));
+      const mail4 = out3.slice(vorProfil);
+      const erwartet = { Leadership: "5,0", Alignment: "4,0", Steuerung: "3,0", Teams: "2,0", Architektur: "1,0" };
+      check("Mail ordnet jede Dimension ihrem Wert zu",
+        DIMS.every(d => mail4.includes(d + ":" + " ".repeat(Math.max(1, 14 - (d + ":").length)) + erwartet[d])),
+        mail4.slice(0, 700));
+      /* Angezeigt wird in der ATLAS-Reihenfolge, nicht in der Speicherfolge. */
+      const stellen = DIMS.map(d => mail4.indexOf("\n" + d + ":"));
+      check("Profil steht in der ATLAS-Reihenfolge",
+        stellen.every((v, i) => v > 0 && (i === 0 || v > stellen[i - 1])), stellen);
 
       // Teammodus: eine Antwort ohne Kontaktdaten ist keine Anfrage.
       const vorher = out3.length;
