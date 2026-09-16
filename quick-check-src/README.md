@@ -1,4 +1,4 @@
-# LASTA Quick Check
+# ATLAS Quick Check
 
 Ein Fragebogen, zwei Betriebsarten, **eine Codebasis**.
 
@@ -11,55 +11,96 @@ Ein Fragebogen, zwei Betriebsarten, **eine Codebasis**.
 | Betrieb | statisch, GitHub Pages | Node-Server, eigene Hetzner-Cloud-Instanz |
 
 Ersetzt das frühere Typeform (`form.typeform.com/to/JiDiDyST`) und die
-SpiderApp aus dem WIEN-IT-Workshop.
+SpiderApp aus einem früheren Kundenworkshop.
 
-## Stand am 03.09.2026
+## Stand am 15.09.2026
 
 **Einzelmodus ist live** unter https://it-team-flow.de/quick-check/, erreichbar
-über die Blog-Kachel der Startseite. Er läuft ohne Backend: das Ergebnis
-entsteht im Browser, das Kontaktformular überträgt nichts, und die Seite weist
-darauf hin.
+über eine eigene Sektion der Startseite.
 
-**Teammodus läuft, unter einem vorläufigen Namen.** Er ist erreichbar unter
+**Teammodus läuft.** Der endgültige Name lautet:
 
 ```
-https://quick-check.2.28.53.22.sslip.io/quick-check/
+https://atlas-quick-check.it-agile.de/quick-check/
 ```
+
+Das Provisorium `quick-check.2.28.53.22.sslip.io` ist abgelöst. Der Dienst
+antwortete am 15.09.2026 zunächst unter `wompti-quick-check.it-agile.de`; mit
+der Umbenennung des Produkts auf ATLAS heißt er wie oben. **Im DNS und auf dem
+Server steht dieser Schritt noch aus**, siehe „Was als Nächstes zu tun ist".
 
 Vollständig geprüft: HTTPS mit gültigem Zertifikat, Einreichungen werden
 korrekt gemittelt, Rohdaten nur mit Token, Reset leert den Raum, QR-Code wird
 geliefert. Der Dienst startet nach einem Neustart der Maschine von selbst.
 
-Der Name ist ein Provisorium, siehe „Vom Provisorium zum endgültigen Namen".
-Alles andere ist Dauerbetrieb.
+**`apiBase` ist gesetzt.** Der Einzelmodus überträgt Kontaktdaten damit an
+`https://atlas-quick-check.it-agile.de`. Wirksam wird das erst mit dem Push
+nach GitHub Pages, und nur zusammen mit den Punkten unter „Was als Nächstes zu
+tun ist".
 
 ### Was als Nächstes zu tun ist
 
-1. **A-Eintrag bei united-domains setzen**: `quick-check` in der Zone
-   `it-team-flow.de` auf `2.28.53.22`. Dafür wird jemand mit Zugang zum
-   united-domains-Konto gebraucht — das ist die einzige verbliebene
-   Abhängigkeit von einer anderen Person.
-2. **Namen umstellen**, zwei Zeilen, siehe unten.
-3. Danach **`apiBase` in `app/config.solo.js`** auf den Dienst zeigen lassen und
-   `python3 sync.py` ausführen, damit auch der öffentliche Quick Check seine
-   Anfragen dorthin sendet. Bewusst noch nicht getan: Solange der Name
-   provisorisch ist, würde die Produktivseite echte Leads an eine Adresse
-   senden, die von einem fremden Gratisdienst abhängt.
+1. **A-Eintrag `atlas-quick-check` → `2.28.53.22`** bei united-domains in der
+   Zone `it-agile.de` setzen, dann die AAAA-Gegenprobe (siehe „Der Name, und
+   wie er zustande kam"). Danach auf dem Server:
+
+   ```bash
+   sed -i 's/wompti-quick-check\.it-agile\.de/atlas-quick-check.it-agile.de/' \
+     /etc/caddy/Caddyfile /etc/quick-check.env
+   systemctl reload caddy && systemctl restart quick-check
+   ```
+
+   Caddy holt das neue Zertifikat selbst. Der Eintrag für `wompti-quick-check`
+   kann danach weg.
+
+2. **`ALLOWED_ORIGINS` auf dem Server prüfen.** Der Wert muss
+   `https://it-team-flow.de` enthalten:
+
+   ```bash
+   ssh root@2.28.53.22 'grep -E "ALLOWED_ORIGINS|PUBLIC_URL" /etc/quick-check.env'
+   ```
+
+   Fehlt die Herkunft, blockt der Browser die Anfrage, die App zeigt „konnte
+   nicht übertragen werden", und der Lead ist weg.
+
+3. **`NOTIFY_TO`, `NOTIFY_FROM` und die `SMTP_*`-Variablen** in
+   `/etc/quick-check.env` eintragen, siehe „Benachrichtigung einrichten".
+   Ohne sie liegt jede Anfrage in `data.json`, bis jemand sie abholt.
+
+4. **Sicherung einschalten**, siehe „Sicherung der Daten". Ab der ersten
+   echten Anfrage ist `data.json` die einzige Kopie einer
+   Geschäftsinformation.
+
+5. **Raum `default` leeren**, falls beim Einrichten ohne `?room=` getestet
+   wurde. Dort landen später die Leads aus dem Einzelmodus:
+
+   ```bash
+   curl -X POST -H "x-admin-token: TOKEN" -H "content-type: application/json" \
+     -d '{"room":"default"}' https://atlas-quick-check.it-agile.de/api/reset
+   ```
+
+6. **Erst dann pushen.** `apiBase` und der Abschnitt „ATLAS Quick Check" in
+   `content/datenschutz.md` gehören in denselben Push: Er beschreibt, dass
+   Daten übertragen werden, wohin und auf welcher Rechtsgrundlage. Vorher
+   stimmt er nicht — nachher fehlt er.
 
 ### Was danach noch offen bleibt
 
-- **E-Mail-Benachrichtigung** bei neuen Anfragen. Ohne sie liegt ein Lead in
-  `data.json`, bis jemand ihn abholt. Das Vorbild ist das Powermail-Formular auf
-  `it-agile.de/kontakt/`, das genau das tut: speichern und benachrichtigen.
-- **Backups.** Bewusst abgeschaltet, weil im Testbetrieb nichts zu verlieren
-  ist. Sobald der Einzelmodus echte Leads schreibt, ist `data.json` die einzige
-  Kopie einer Geschäftsinformation. Dann entweder Hetzner-Backups einschalten
-  oder die Datei täglich wegsichern.
+- **Auftragsverarbeitungsvertrag mit Hetzner.** Die Datenschutzerklärung nennt
+  die Hetzner Online GmbH als Auftragsverarbeiterin. Ein Vertrag nach Art. 28
+  DSGVO muss dazu vorliegen; Hetzner stellt ihn in der Cloud Console bereit.
+- **Zugriffsprotokoll des Proxys.** Ob Caddy auf dieser Maschine ein
+  Zugriffsprotokoll mit IP-Adressen schreibt, ist nicht geprüft. Wenn ja,
+  braucht die Datenschutzerklärung dazu einen Satz und es braucht eine
+  Löschfrist. `Caddyfile.example` enthält keine `log`-Anweisung, aber die
+  Voreinstellung der Distribution ist damit nicht ausgeschlossen.
 - **Mindestzahl an Rückmeldungen**, bevor im Teammodus ein Gruppenprofil
   erscheint. Bei drei oder vier Teilnehmenden lassen sich einzelne Antworten aus
   dem Mittelwert zurückrechnen.
-- **Datenschutzerklärung** um den Quick Check ergänzen, sobald das
-  Kontaktformular tatsächlich Daten überträgt.
+- **Zustellbarkeit der Benachrichtigung.** Sie hängt an einem fremden
+  Postausgangsserver. Fällt der aus, bleibt die Anfrage gespeichert und trägt
+  `notify: "fehlgeschlagen"`, aber niemand erfährt davon, solange keiner
+  hinsieht. Ein täglicher Blick oder eine Überwachung wäre der nächste Schritt.
 
 ## Verzeichnisse
 
@@ -73,6 +114,9 @@ quick-check-src/            <- HIER wird bearbeitet
   server/quick-check.service systemd-Unit
   server/quick-check.env.example  Vorlage der Umgebungsvariablen
   server/Caddyfile.example  Reverse-Proxy-Konfiguration
+  server/backup.sh          Tagessicherung von data.json
+  server/quick-check-backup.service   systemd-Unit dazu
+  server/quick-check-backup.timer     Zeitplan dazu
   sync.py                   erzeugt beide Deployments
   test/test.js              Testsuite
 
@@ -119,8 +163,13 @@ NODE_PATH=~/.qc-test/node_modules node test/test.js
 ```
 
 Geprüft werden die **erzeugten** Dateien, damit `sync.py` mit abgedeckt ist.
-Der Backend-Teil startet einen echten Server auf Port 31739 gegen eine
-temporäre Datendatei.
+Der Backend-Teil startet echte Server auf den Ports 31739 bis 31741 gegen
+temporäre Datendateien. Die Benachrichtigung wird über `NOTIFY_DRY_RUN`
+geprüft: die Suite braucht keinen Postausgangsserver und verschickt nichts.
+
+Ein Teil der Prüfungen liest `content/datenschutz.md` und vergleicht sie mit
+dem Formular. Kommt dort ein Feld dazu, schlägt die Prüfung fehl, bis die
+Datenschutzerklärung es nennt.
 
 ## Einzelmodus veröffentlichen
 
@@ -130,18 +179,36 @@ Build-Schritt. Nach dem Push auf `main` deployt der Workflow
 `.github/workflows/hugo.yml` nach GitHub Pages, erreichbar unter
 `https://it-team-flow.de/quick-check/`.
 
-Ohne Backend läuft die Seite im Testbetrieb: das Ergebnis entsteht im Browser,
-es wird nichts übertragen und nichts gespeichert. Die Seite sagt das auch.
+Ist `apiBase` in `app/config.solo.js` leer, läuft die Seite im Testbetrieb: das
+Ergebnis entsteht im Browser, es wird nichts übertragen und nichts gespeichert.
+Die Seite sagt das auch.
 
-Für die Lead-Erfassung in `app/config.solo.js`:
+Für die Lead-Erfassung steht dort seit dem 15.09.2026:
 
 ```js
-apiBase: "https://quick-check.it-team-flow.de"
+apiBase: "https://atlas-quick-check.it-agile.de"
 ```
 
-Danach `sync.py`. Das Backend muss die Herkunft `https://it-team-flow.de` in
-`ALLOWED_ORIGINS` führen, sonst blockt der Browser die Anfrage. Erst umstellen,
-wenn der endgültige Name steht.
+Nach jeder Änderung `sync.py`. Drei Dinge hängen daran, alle drei vor oder mit
+demselben Push:
+
+1. Das Backend muss die Herkunft `https://it-team-flow.de` in
+   `ALLOWED_ORIGINS` führen, sonst blockt der Browser die Anfrage. Der Fehler
+   ist tückisch: die App fängt ihn ab, zeigt „konnte nicht übertragen werden",
+   und der Lead ist weg. Prüfen mit
+
+   ```bash
+   ssh root@2.28.53.22 'grep ALLOWED_ORIGINS /etc/quick-check.env'
+   ```
+
+2. Der Abschnitt „ATLAS Quick Check" in `content/datenschutz.md` beschreibt die
+   Übertragung. Vorher stimmt er nicht, nachher fehlt er. Also gemeinsam
+   pushen.
+
+3. Die Benachrichtigung muss stehen, siehe „Benachrichtigung einrichten".
+   Sonst liegt der erste echte Lead ungesehen in `data.json`.
+
+Erst umstellen, wenn der endgültige Name steht.
 
 ## Der Server
 
@@ -175,7 +242,7 @@ Umstellen der Nameserver gefährlich, weil dort auch MX und SPF hängen.
 
 | | |
 |---|---|
-| Maschine | `2.28.53.22`, Hetzner Cloud, Rechenzentrum Nürnberg, Name `wompti-quick-check` |
+| Maschine | `2.28.53.22`, Hetzner Cloud, Rechenzentrum Nürnberg, Name in der Cloud Console `wompti-quick-check` (nur intern) |
 | System | Debian 13 (trixie), systemd 257 |
 | Node | 20.19.2 aus den Debian-Quellen, kein Fremdrepository |
 | Dienst | systemd-Unit `quick-check`, Benutzer `quickcheck`, Programm in `/opt/quick-check` |
@@ -233,32 +300,121 @@ curl -s localhost:3000/api/aggregate   # muss {"room":"default","count":0,...} l
 | `PUBLIC_URL` | Basis-URL für den QR-Code. Ausdrücklich setzen, dann hängt der QR-Code nicht von Kopfzeilen des Proxys ab. |
 | `DATA_FILE` | `/var/lib/quick-check/data.json` |
 | `HOST` | Standard `127.0.0.1`. Nur setzen, wenn der Dienst bewusst ohne Proxy erreichbar sein soll. |
+| `NOTIFY_TO` | Empfänger der Benachrichtigung, Kommaliste. Besser ein Postfach als eine Person, sonst bleibt eine Anfrage im Urlaub liegen. |
+| `NOTIFY_FROM` | Absender. Muss zu `SMTP_USER` passen, sonst weist der Postausgangsserver ab oder der Empfänger stuft als Spam ein. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Postausgangsserver. Port 587 mit STARTTLS ist die Voreinstellung. `SMTP_PASS` ist ein Geheimnis und gehört nur hierher. |
+| `SMTP_SECURE` | `1` für TLS ab der ersten Verbindung, meist Port 465. Sonst leer lassen. |
+| `NOTIFY_DRY_RUN` | `1` schreibt die Mail nur in das Journal, ohne sie zu senden. Zum Einrichten. |
 
-### Vom Provisorium zum endgültigen Namen
+Fehlt eine der drei Angaben `SMTP_HOST`, `NOTIFY_TO`, `NOTIFY_FROM`, meldet der
+Dienst nichts. Anfragen werden dann trotzdem gespeichert, und der Dienst warnt
+beim Start:
 
-`quick-check.2.28.53.22.sslip.io` funktioniert ohne jeden DNS-Eintrag:
-`sslip.io` löst jeden Namen, der eine IP-Adresse enthält, auf genau diese
-Adresse auf. Das genügt für ein echtes Let's-Encrypt-Zertifikat, weil der Name
-nachweislich auf diesen Server zeigt.
-
-Es ist ein fremder, kostenloser Dienst. Fällt er aus, ist der Name weg. Für
-den Dauerbetrieb taugt das nicht.
-
-Sobald der A-Eintrag `quick-check.it-team-flow.de` → `2.28.53.22` bei
-united-domains steht, sind es zwei Zeilen:
-
-```bash
-sed -i 's/quick-check\.2\.28\.53\.22\.sslip\.io/quick-check.it-team-flow.de/' \
-  /etc/caddy/Caddyfile /etc/quick-check.env
-systemctl reload caddy
-systemctl restart quick-check
+```
+WARNUNG: Keine Benachrichtigung bei neuen Anfragen. ...
 ```
 
-Caddy holt das neue Zertifikat von selbst. Danach `apiBase` in
-`app/config.solo.js` setzen, `sync.py` laufen lassen, pushen.
+### Benachrichtigung einrichten
 
-Der Platzhalter der Zone zeigt auf GitHub Pages; ein ausdrücklicher Eintrag für
-`quick-check` hat Vorrang vor ihm.
+Zuerst im Probelauf, damit man den Inhalt einmal sieht, ohne jemandem eine Mail
+zu schicken:
+
+```bash
+# in /etc/quick-check.env
+NOTIFY_TO=flow@it-agile.de
+NOTIFY_FROM=quick-check@it-agile.de
+NOTIFY_DRY_RUN=1
+```
+
+```bash
+systemctl restart quick-check
+journalctl -u quick-check -f          # in einem zweiten Fenster mitlesen
+```
+
+Dann eine Anfrage über das Formular abschicken. Die Mail steht vollständig im
+Journal. Passt sie, `SMTP_*` eintragen, `NOTIFY_DRY_RUN` leeren und neu
+starten. Beim Start prüft der Dienst die Zugangsdaten einmal und sagt:
+
+```
+Benachrichtigung bereit: smtp.example.net:587 an flow@it-agile.de
+```
+
+Stimmt etwas nicht, steht dort stattdessen eine Warnung — dann merkt man den
+Tippfehler beim Einrichten und nicht an der ersten echten Anfrage.
+
+Der Versand läuft **nach** der Antwort an den Browser. Eine Anfrage geht also
+nie verloren, weil der Postausgangsserver klemmt; sie ist gespeichert, bevor
+die Mail überhaupt versucht wird. Der Ausgang steht als `notify` an jeder
+Einreichung: `versandt`, `probelauf`, `aus` oder `fehlgeschlagen`. Übersehene
+Anfragen findet man damit wieder:
+
+```bash
+jq '.submissions[] | select(.notify=="fehlgeschlagen")' /var/lib/quick-check/data.json
+```
+
+### Sicherung der Daten
+
+`data.json` ist die einzige Kopie der eingegangenen Anfragen. Ein Fehlgriff mit
+`/api/reset` löscht sie ohne Rückfrage. `backup.sh` legt eine Kopie je Tag ab
+und wirft nach 30 Tagen die alten weg:
+
+```bash
+install -m 700 -o root -g root backup.sh /usr/local/sbin/quick-check-backup
+install -m 644 quick-check-backup.service quick-check-backup.timer /etc/systemd/system/
+mkdir -p /var/backups/quick-check && chmod 700 /var/backups/quick-check
+systemctl daemon-reload
+systemctl enable --now quick-check-backup.timer
+systemctl start quick-check-backup     # einmal von Hand, zur Probe
+ls -l /var/backups/quick-check
+```
+
+Das ist eine Sicherung **auf derselben Maschine**: gegen das versehentliche
+Löschen hilft sie, gegen den Verlust des Servers nicht. Dafür zusätzlich die
+Backups in der Hetzner Cloud Console einschalten oder die Datei woanders
+hinziehen.
+
+### Der Name, und wie er zustande kam
+
+Der Dienst läuft unter `atlas-quick-check.it-agile.de`. Der A-Eintrag dazu
+liegt bei **united-domains** in der Zone `it-agile.de` und zeigt auf
+`2.28.53.22`. Beide Zonen, `it-agile.de` und `it-team-flow.de`, werden von
+`ns.udag.de` bedient; eine Zone bei Hetzner anzulegen wäre wirkungslos und beim
+Umstellen der Nameserver gefährlich, weil dort auch MX und SPF hängen.
+
+**Beide Zonen haben einen Platzhalter.** `*.it-agile.de` zeigt auf die
+TYPO3-Maschine `162.55.222.147` (A **und** AAAA), `*.it-team-flow.de` auf
+GitHub Pages (nur A). Ein ausdrücklicher Eintrag hat Vorrang: Sobald der Name
+selbst existiert, greift der Platzhalter für ihn gar nicht mehr, auch nicht für
+AAAA. Für den Vorgängernamen `wompti-quick-check.it-agile.de` wurde das am
+15.09.2026 nachgemessen: Der A-Eintrag kam durch, die AAAA-Antwort blieb leer.
+Für `atlas-quick-check` steht die Gegenprobe noch aus. Ohne diese Eigenschaft wären
+IPv6-Clients auf dem TYPO3 gelandet und hätten ein 404 gesehen, während
+IPv4-Clients den Quick Check bekommen. Bei künftigen Subdomains beides prüfen:
+
+```bash
+dig +short NAME.it-agile.de A      # muss 2.28.53.22 sein
+dig +short NAME.it-agile.de AAAA   # muss leer sein
+```
+
+Vorher lief der Dienst unter `quick-check.2.28.53.22.sslip.io`. `sslip.io` löst
+jeden Namen, der eine IP-Adresse enthält, auf genau diese Adresse auf — das
+genügt für ein echtes Let's-Encrypt-Zertifikat, ohne jeden DNS-Eintrag. Es ist
+aber ein fremder, kostenloser Dienst; fällt er aus, ist der Name weg. Für einen
+künftigen Umzug oder Neuaufbau ist das der Weg, um ohne DNS-Abhängigkeit
+anzufangen.
+
+Der Namenswechsel selbst sind zwei Zeilen auf dem Server:
+
+```bash
+sed -i 's/ALTER\.NAME/NEUER.NAME/' /etc/caddy/Caddyfile /etc/quick-check.env
+systemctl reload caddy && systemctl restart quick-check
+```
+
+`/etc/quick-check.env` deshalb mit, weil dort `PUBLIC_URL` steht — die Basis für
+den QR-Code. Caddy holt das neue Zertifikat von selbst; der Verlauf steht in
+`journalctl -u caddy`. **`ALLOWED_ORIGINS` ändert sich dabei nicht**: Das ist
+die Herkunft der aufrufenden Seite (`https://it-team-flow.de`), nicht die des
+Dienstes.
 
 ### Wieder abbauen
 
@@ -279,11 +435,11 @@ deluser quickcheck
 ## Workshop durchführen
 
 1. Raumcode wählen — **nicht nur den Kundennamen**, sondern mit einem nicht
-   erratbaren Zusatz: `wien-4823` statt `wien`. Grund: `GET /api/aggregate` ist
+   erratbaren Zusatz: `kunde-4823` statt `kunde`. Grund: `GET /api/aggregate` ist
    öffentlich, wer den Raumcode errät, sieht das Gruppenprofil. Siehe „Offene
    Punkte". Die Teilnehmenden tippen den Code nie, er steckt im QR-Code.
 2. Moderationsansicht öffnen und projizieren:
-   `https://quick-check.2.28.53.22.sslip.io/quick-check/?room=wien-4823&present=1`
+   `https://atlas-quick-check.it-agile.de/quick-check/?room=kunde-4823&present=1`
    Sie zeigt QR-Code, Adresse, Raumcode, Anzahl der Rückmeldungen und das
    Gruppenprofil. Aktualisierung alle drei Sekunden.
 3. Teilnehmende scannen den QR-Code, beantworten 15 Aussagen und sehen danach
@@ -291,21 +447,22 @@ deluser quickcheck
 4. Nach dem Workshop über die Moderationsansicht zurücksetzen. Das fragt nach
    dem `ADMIN_TOKEN` und leert **nur diesen Raum**.
 
-Nach der Umstellung auf den endgültigen Namen lautet die Adresse
-`https://quick-check.it-team-flow.de/quick-check/?room=wien-4823&present=1`.
+Beim Einrichten ohne `?room=` zu testen, füllt den Raum `default` — denselben,
+in dem die Leads aus dem Einzelmodus landen. Dafür lieber einen eigenen
+Raumnamen verwenden.
 
 Leads aus dem Einzelmodus exportieren:
 
 ```bash
 curl -H "x-admin-token: DEIN-TOKEN" \
-  https://quick-check.2.28.53.22.sslip.io/api/data?room=default
+  https://atlas-quick-check.it-agile.de/api/data?room=default
 ```
 
 ## API
 
 | Endpunkt | Zugang | Zweck |
 |---|---|---|
-| `POST /api/submit` | öffentlich | Antworten, optional Kontaktdaten. Verlangt ein Feld `id`. Begrenzt auf 30 Einreichungen je IP in 10 Minuten. |
+| `POST /api/submit` | öffentlich | Antworten, optional Kontaktdaten. Verlangt ein Feld `id`. Begrenzt auf 30 Einreichungen je IP in 10 Minuten. Kontaktdaten nimmt der Server nur mit `consent: true` und gültiger E-Mail-Adresse an, sonst 400 (`consent_required`, `invalid_email`). Das Formular prüft beides auch — aber ein Formular ist keine Zugangskontrolle. |
 | `GET /api/aggregate?room=` | öffentlich | **nur** Anzahl und Mittelwert je Frage. Keine Rohdaten, keine Kontaktdaten. |
 | `GET /api/qr?room=` | öffentlich | QR-Code als SVG |
 | `GET /api/data` | Token | Rohdaten inklusive Kontaktdaten, optional nach Raum |
@@ -315,6 +472,28 @@ Der Server kennt den Fragebogen **nicht**. Er aggregiert nur je Frage
 (`q0`, `q1`, …) und weiss nichts von Dimensionen, Zonen oder Texten. Die
 Zuordnung macht die App. Deshalb müssen Änderungen am Fragebogen nur an einer
 Stelle gemacht werden.
+
+### Zwei Reihenfolgen, die nicht dasselbe sind
+
+| | wo | Reihenfolge |
+|---|---|---|
+| **Anzeige** | `DIMENSIONS` in `app/app.js` | Alignment, Teams, Leadership, Architektur, Steuerung |
+| **Speicherung** | `QUESTIONS` in `app/app.js` → `q0`…`q14` | Leadership, Alignment, Steuerung, Teams, Architektur |
+
+`DIMENSIONS` bestimmt nur die Darstellung: auf welchem Schritt eine Dimension
+abgefragt wird und wo ihre Achse auf der Zielscheibe sitzt. Sie ergibt das
+Merkwort **ATLAS**.
+
+Die Kennungen `q0` bis `q14` entstehen dagegen aus `QUESTIONS`, je drei
+Aussagen pro Dimension. Diese Reihenfolge ist bei der Umbenennung von LASTA auf
+ATLAS am 15.09.2026 **bewusst unverändert geblieben**: Da der Server nur je
+`q`-Kennung mittelt, würde ein Umsortieren dort sämtliche bereits erhobenen
+Antworten umdeuten, ohne dass es irgendwo auffiele.
+
+Wer den Fragebogen umbaut, muss deshalb wissen, welche der beiden Listen er
+anfasst. Zwei Prüfungen in Abschnitt [2] der Testsuite halten die Trennung fest,
+und die Testhilfe `aggregate` bildet `q0`…`q14` über `QUESTION_DIMS` ab, nicht
+über `DIMS`.
 
 ## Offene Punkte
 
