@@ -1,0 +1,12 @@
+[Unit]
+Description=Taegliche Sicherung der ATLAS-Quick-Check-Daten
+
+[Timer]
+OnCalendar=daily
+# Nachtraeglich ausfuehren, wenn die Maschine zur geplanten Zeit aus war.
+Persistent=true
+# Nicht alle Timer gleichzeitig losschicken.
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

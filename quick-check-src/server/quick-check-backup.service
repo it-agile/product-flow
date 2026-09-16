@@ -1,0 +1,18 @@
+[Unit]
+Description=Sicherung der ATLAS-Quick-Check-Daten
+# Nicht waehrend eines Neustarts des Dienstes sichern.
+After=quick-check.service
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/local/sbin/quick-check-backup
+EnvironmentFile=-/etc/quick-check.env
+
+# Laeuft als root, weil /var/backups nicht dem Dienstbenutzer gehoert. Dafuer
+# so eng wie moeglich: lesen darf es alles, schreiben nur das Sicherungsziel.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/backups/quick-check

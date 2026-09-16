@@ -1,6 +1,6 @@
 "use strict";
 
-/* Backend für den LASTA Quick Check.
+/* Backend für den ATLAS Quick Check.
  *
  * Zwei Aufgaben:
  *   1. Teammodus: Antworten mehrerer Personen sammeln und als Mittelwert je
@@ -12,7 +12,9 @@
  * Zuordnung macht die App. So bleibt der Fragebogen an einer Stelle gepflegt.
  *
  * Endpunkte:
- *   POST /api/submit              öffentlich   Antworten, optional Kontaktdaten
+ *   POST /api/submit              öffentlich   Antworten, optional Kontaktdaten.
+ *                                              Kontaktdaten nur mit Einwilligung
+ *                                              und gültiger E-Mail-Adresse.
  *   GET  /api/aggregate?room=     öffentlich   nur Anzahl und Mittelwerte
  *   GET  /api/qr?room=            öffentlich   QR-Code als SVG
  *   GET  /api/data                Token nötig  Rohdaten inklusive Kontaktdaten
@@ -26,15 +28,29 @@
  *                    z. B. "https://it-team-flow.de". Ohne Angabe sind nur
  *                    Anfragen von derselben Herkunft möglich.
  *   PUBLIC_URL       Basis-URL für den QR-Code, z. B.
- *                    "https://quick-check.it-team-flow.de". Ohne Angabe wird sie
+ *                    "https://atlas-quick-check.it-agile.de". Ohne Angabe wird sie
  *                    aus den Anfrage-Headern abgeleitet.
  *   DATA_FILE        Pfad der Datendatei, Standard ./data.json
+ *
+ * Benachrichtigung bei neuen Anfragen. Ohne SMTP_HOST, NOTIFY_TO und
+ * NOTIFY_FROM bleibt sie aus; der Dienst läuft dann wie bisher und sagt das
+ * beim Start. Die Anfrage hängt nie am Mailversand: sie ist gespeichert, bevor
+ * die Mail überhaupt versucht wird.
+ *   SMTP_HOST        Postausgangsserver
+ *   SMTP_PORT        Standard 587 (STARTTLS)
+ *   SMTP_SECURE      "1" für TLS ab der ersten Verbindung, meist Port 465
+ *   SMTP_USER        Postfach
+ *   SMTP_PASS        Kennwort. Gehört nur in /etc/quick-check.env, 0600 root.
+ *   NOTIFY_TO        Empfänger, Kommaliste
+ *   NOTIFY_FROM      Absender, muss zum Postfach passen
+ *   NOTIFY_DRY_RUN   "1" schreibt die Mail nur auf die Ausgabe, ohne Versand
  */
 
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const QRCode = require("qrcode");
+const nodemailer = require("nodemailer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +62,21 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .split(",").map((s) => s.trim()).filter(Boolean);
 const PUBLIC_URL = (process.env.PUBLIC_URL || "").replace(/\/+$/, "");
+
+const SMTP_HOST = process.env.SMTP_HOST || "";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = process.env.SMTP_SECURE === "1";
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+const NOTIFY_TO = (process.env.NOTIFY_TO || "")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+const NOTIFY_FROM = process.env.NOTIFY_FROM || "";
+const NOTIFY_DRY_RUN = process.env.NOTIFY_DRY_RUN === "1";
+/* Ohne Empfänger und Absender gibt es niemanden, dem man etwas schicken
+ * könnte. Der Probelauf braucht keinen Postausgangsserver, der echte Versand
+ * schon. */
+const NOTIFY_READY = NOTIFY_TO.length > 0 && !!NOTIFY_FROM &&
+  (NOTIFY_DRY_RUN || !!SMTP_HOST);
 
 const MAX_ANSWERS = 50;          // grosszügige Obergrenze, schützt vor Müll
 const MAX_FIELD_LEN = 200;       // je Kontaktfeld
@@ -92,6 +123,21 @@ function validAnswers(answers) {
   });
 }
 
+/* Steuerzeichen aus einem einzeiligen Feld entfernen. Ein Zeilenumbruch in
+ * Name oder E-Mail hat dort nichts zu suchen und wäre in einer Mail-Kopfzeile
+ * gefährlich. */
+function stripLine(value) {
+  return value.replace(/[\u0000-\u001f\u007f]/g, "");
+}
+
+/* Im Freitext bleiben Zeilenumbrüche und Tabulatoren erhalten, alles andere
+ * Unsichtbare fliegt heraus. */
+function stripText(value) {
+  return value.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "");
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 /* Kontaktdaten auf bekannte Felder und Längen beschränken. Alles andere fliegt
  * heraus, damit über dieses Feld nichts Beliebiges in der Datei landet. */
 function cleanContact(contact) {
@@ -99,14 +145,28 @@ function cleanContact(contact) {
   if (typeof contact !== "object" || Array.isArray(contact)) return null;
   const out = {};
   ["firstname", "lastname", "email", "phone", "company", "topic"].forEach((k) => {
-    if (typeof contact[k] === "string") out[k] = contact[k].trim().slice(0, MAX_FIELD_LEN);
+    if (typeof contact[k] === "string") {
+      out[k] = stripLine(contact[k]).trim().slice(0, MAX_FIELD_LEN);
+    }
   });
   // Freitext braucht mehr Platz als ein Namensfeld, aber ebenfalls eine Grenze.
   if (typeof contact.message === "string") {
-    out.message = contact.message.trim().slice(0, MAX_MESSAGE_LEN);
+    out.message = stripText(contact.message).trim().slice(0, MAX_MESSAGE_LEN);
   }
   out.consent = contact.consent === true;
   return out;
+}
+
+/* Zwei Bedingungen, ohne die Kontaktdaten nicht gespeichert werden dürfen oder
+ * nutzlos wären. Der Browser prüft beides schon, aber ein Formular ist keine
+ * Zugangskontrolle: ein Aufruf an /api/submit vorbei am Formular hat sonst
+ * personenbezogene Daten ohne Einwilligung in die Datei geschrieben.
+ * Name und Unternehmen bleiben bewusst freiwillig — eine Anfrage mit
+ * E-Mail-Adresse ist beantwortbar, auch wenn der Name fehlt. */
+function contactProblem(contact) {
+  if (contact.consent !== true) return "consent_required";
+  if (!EMAIL_RE.test(contact.email || "")) return "invalid_email";
+  return null;
 }
 
 const rateBuckets = new Map();
@@ -152,6 +212,83 @@ function baseUrl(req) {
   return proto + "://" + host;
 }
 
+// ---------------------------------------------------------- Benachrichtigung
+
+let transport = null;
+
+function mailer() {
+  if (!transport) {
+    transport = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASS } : undefined
+    });
+  }
+  return transport;
+}
+
+/* Der Server kennt den Fragebogen nicht und deutet die Antworten deshalb auch
+ * in der Mail nicht. Sie enthält, was zum Antworten nötig ist; das Profil holt
+ * man über /api/data. */
+function leadMail(entry) {
+  const c = entry.contact || {};
+  const name = [c.firstname, c.lastname].filter(Boolean).join(" ");
+  const row = (label, value) =>
+    label + " ".repeat(Math.max(1, 14 - label.length)) + (value || "—");
+
+  const lines = [
+    "Neue Anfrage aus dem ATLAS Quick Check.",
+    "",
+    row("Name:", name),
+    row("E-Mail:", c.email),
+    row("Telefon:", c.phone),
+    row("Unternehmen:", c.company),
+    row("Anliegen:", c.topic),
+    "",
+    "Nachricht:",
+    c.message || "(keine)",
+    "",
+    // Ortszeit, nicht UTC: die Mail liest jemand in Hamburg, nicht ein Rechner.
+    row("Eingegangen:", new Date(entry.ts).toLocaleString("de-DE",
+      { timeZone: "Europe/Berlin", dateStyle: "medium", timeStyle: "short" }) + " Uhr"),
+    row("Quelle:", entry.source),
+    row("Raum:", entry.room),
+    row("Kennung:", entry.id),
+    "",
+    "Die Einwilligung liegt vor, sonst wäre die Anfrage nicht angenommen worden.",
+    "Das ATLAS-Profil dazu liefert GET /api/data" +
+      (PUBLIC_URL ? " auf " + PUBLIC_URL : "") + ", dafür wird das Admin-Token gebraucht."
+  ];
+
+  return {
+    subject: "Quick Check: Anfrage von " + (name || c.email || "unbekannt"),
+    text: lines.join("\n") + "\n"
+  };
+}
+
+function notifyLead(entry) {
+  if (!NOTIFY_READY) return Promise.resolve("aus");
+
+  const mail = leadMail(entry);
+  const message = {
+    from: NOTIFY_FROM,
+    to: NOTIFY_TO.join(", "),
+    subject: mail.subject,
+    text: mail.text
+  };
+  // Antworten geht damit direkt an die anfragende Person.
+  if (entry.contact && entry.contact.email) message.replyTo = entry.contact.email;
+
+  if (NOTIFY_DRY_RUN) {
+    console.log("[Benachrichtigung: Probelauf]\nAn: " + message.to +
+      "\nAntwort an: " + (message.replyTo || "—") +
+      "\nBetreff: " + message.subject + "\n\n" + message.text);
+    return Promise.resolve("probelauf");
+  }
+  return mailer().sendMail(message).then(() => "versandt");
+}
+
 // ---------------------------------------------------------------- Middleware
 
 app.disable("x-powered-by");
@@ -187,6 +324,10 @@ app.post("/api/submit", (req, res) => {
   }
   const contact = cleanContact(body.contact);
   if (contact === null) return res.status(400).json({ error: "invalid_contact" });
+  if (contact) {
+    const problem = contactProblem(contact);
+    if (problem) return res.status(400).json({ error: problem });
+  }
 
   if (store.submissions.some((s) => s.id === body.id)) {
     return res.json({ ok: true, alreadyExists: true });
@@ -198,12 +339,40 @@ app.post("/api/submit", (req, res) => {
     room: cleanRoom(body.room),
     answers: body.answers
   };
-  if (contact) entry.contact = contact;
-  if (typeof body.source === "string") entry.source = body.source.slice(0, MAX_FIELD_LEN);
+  if (contact) {
+    entry.contact = contact;
+    // Vor dem Versuch schon vermerkt: ein Absturz mitten im Versand bleibt so sichtbar.
+    entry.notify = "offen";
+  }
+  if (typeof body.source === "string") {
+    entry.source = stripLine(body.source).slice(0, MAX_FIELD_LEN);
+  }
 
   store.submissions.push(entry);
   saveData(store);
   res.json({ ok: true });
+
+  /* Die Antwort ist heraus, die Anfrage liegt in der Datei. Der Mailversand
+   * darf ab hier beliebig lange dauern oder scheitern, ohne dass die Person
+   * davon etwas merkt. Der Ausgang landet als entry.notify in der Datei, damit
+   * übersehene Anfragen auffindbar sind:
+   *   jq '.submissions[] | select(.notify=="fehlgeschlagen")' data.json
+   */
+  if (contact) {
+    notifyLead(entry).then((state) => {
+      entry.notify = state;
+    }, (err) => {
+      entry.notify = "fehlgeschlagen";
+      console.error("[Quick Check] Benachrichtigung fehlgeschlagen für " + entry.id +
+        ": " + (err && err.message));
+    }).then(() => {
+      try {
+        saveData(store);
+      } catch (e) {
+        console.error("[Quick Check] Versandstand nicht gesichert: " + e.message);
+      }
+    });
+  }
 });
 
 /* Liefert bewusst nur Anzahl und Mittelwerte je Frage. Keine Rohdaten, keine
@@ -278,5 +447,22 @@ app.listen(PORT, HOST, () => {
   }
   if (!ALLOWED_ORIGINS.length) {
     console.log("Hinweis: ALLOWED_ORIGINS ist leer, Zugriffe aus anderen Herkünften werden abgelehnt.");
+  }
+  if (!NOTIFY_READY) {
+    console.warn("WARNUNG: Keine Benachrichtigung bei neuen Anfragen. " +
+      "Dafür werden SMTP_HOST, NOTIFY_TO und NOTIFY_FROM gebraucht. " +
+      "Anfragen liegen bis zur Abholung über /api/data in " + DATA_FILE + ".");
+  } else if (NOTIFY_DRY_RUN) {
+    console.log("Benachrichtigung im Probelauf: Mails gehen auf die Ausgabe, nicht auf die Reise.");
+  } else {
+    /* Zugangsdaten einmal beim Start prüfen. Sonst merkt man einen Tippfehler
+     * erst an der ersten echten Anfrage, und die ist dann schon verpasst. */
+    mailer().verify().then(() => {
+      console.log("Benachrichtigung bereit: " + SMTP_HOST + ":" + SMTP_PORT +
+        " an " + NOTIFY_TO.join(", "));
+    }, (err) => {
+      console.error("WARNUNG: Postausgangsserver nicht erreichbar oder Zugangsdaten falsch: " +
+        (err && err.message) + " — Anfragen werden weiter gespeichert, aber nicht gemeldet.");
+    });
   }
 });
