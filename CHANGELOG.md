@@ -13,13 +13,13 @@ bezeichnet. Neue Einträge oben anfügen.
 Merge-Commit `adabea2`, Stand davor `4c9d3e0`. 17 Commits, 116 geänderte
 Dateien, davon 77 Löschungen des mitcommitteten `public/`.
 
-### Neu: LASTA Quick Check
+### Neu: ATLAS Quick Check
 
 - **Eigener Quick Check unter https://it-team-flow.de/quick-check/** — ersetzt
   das Typeform (`form.typeform.com/to/JiDiDyST`). Im Fragebogen ist damit kein
   Fremdanbieter mehr beteiligt.
 - 15 Aussagen zur teamübergreifenden Lieferfähigkeit, **in fünf Schritten**,
-  eine LASTA-Dimension je Schritt, mit Fortschrittsanzeige und
+  eine ATLAS-Dimension je Schritt, mit Fortschrittsanzeige und
   Zurück-Navigation ohne Antwortverlust.
 - **Ergebnis als Zielscheibe** mit drei Bewertungszonen: Entwicklungsfeld
   (Mittelwert unter 2,0), teilweise wirksam (2,0 bis unter 4,0), wirksam (ab

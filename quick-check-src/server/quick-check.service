@@ -1,5 +1,5 @@
 [Unit]
-Description=LASTA Quick Check backend
+Description=ATLAS Quick Check backend
 After=network.target
 
 [Service]

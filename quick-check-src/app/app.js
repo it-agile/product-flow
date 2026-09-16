@@ -1,4 +1,4 @@
-/* LASTA Quick Check – gemeinsame Logik für Einzel- und Teammodus.
+/* ATLAS Quick Check – gemeinsame Logik für Einzel- und Teammodus.
  *
  * Der Modus kommt aus window.QC_CONFIG (siehe config.solo.js / config.team.js):
  *   mode: "solo"  Eine Person, eigenes Ergebnis, optional Kontaktdaten als Lead.
@@ -20,7 +20,7 @@
   var MODE = CFG.mode === "team" ? "team" : "solo";
   var API = (CFG.apiBase || "").replace(/\/+$/, "");
   var POLL_MS = CFG.pollMs || 3000;
-  var STORAGE_KEY = "lasta-quick-check-draft";
+  var STORAGE_KEY = "atlas-quick-check-draft";
 
   // Im Teammodus liefert immer ein Backend die Seite aus, dann ist ein leerer
   // apiBase gleichbedeutend mit "gleiche Herkunft". Im Einzelmodus bedeutet ein
@@ -37,14 +37,25 @@
   var PRESENT = MODE === "team" && param("present") === "1";
   var TRAINER = MODE === "team" && param("trainer") === "1";
 
-  var TOKEN_KEY = "lasta-quick-check-admin-token";
-  var ROOMS_KEY = "lasta-quick-check-rooms";
+  var TOKEN_KEY = "atlas-quick-check-admin-token";
+  var ROOMS_KEY = "atlas-quick-check-rooms";
 
   // =====================================================================
   // FRAGEBOGEN
   // =====================================================================
 
-  var DIMENSIONS = ["Leadership", "Alignment", "Steuerung", "Teams", "Architektur"];
+  /* Reihenfolge der Abfrage und der Achsen auf der Zielscheibe. Sie ergibt das
+   * Merkwort ATLAS: Alignment, Teams, Leadership, Architektur, Steuerung.
+   *
+   * Die Liste steuert AUSSCHLIESSLICH die Darstellung: welche Dimension auf
+   * welchem Schritt liegt und wo ihre Achse sitzt. Die Kennungen q0 bis q14
+   * entstehen dagegen aus der Reihenfolge von QUESTIONS weiter unten, und die
+   * bleibt unangetastet. Wer hier umsortiert, ändert also die Reihenfolge im
+   * Fragebogen, nicht die Bedeutung der gespeicherten Antworten — Altdaten
+   * bleiben vergleichbar. Wer dagegen QUESTIONS umsortiert, verschiebt die
+   * Kennungen und macht Altdaten unbrauchbar.
+   */
+  var DIMENSIONS = ["Alignment", "Teams", "Leadership", "Architektur", "Steuerung"];
 
   // Erklärung der Dimensionen. Bewusst NICHT im Fragenteil, sondern erst im
   // Ergebnis: eine vorangestellte Definition rahmt die Antwort und verschiebt
@@ -336,7 +347,7 @@
     }).join(". ");
 
     var svg = '<svg viewBox="0 0 ' + w + " " + h +
-      '" role="img" aria-label="Zielscheibe der fünf LASTA-Dimensionen. ' + esc(described) + '">';
+      '" role="img" aria-label="Zielscheibe der fünf ATLAS-Dimensionen. ' + esc(described) + '">';
 
     // Bewertungszonen, von außen nach innen gemalt
     ZONES.slice().reverse().forEach(function (z) {
@@ -607,7 +618,7 @@
 
   function renderResultSolo(submitState) {
     var sc = scoresFromAnswers(answers);
-    $("result-title").textContent = "Dein LASTA-Profil";
+    $("result-title").textContent = "Dein ATLAS-Profil";
     $("result-lead").innerHTML = leadText(sc, "deine Einschätzung");
 
     var band = overallBandFor(sc.overall);
@@ -647,7 +658,7 @@
     var group = groupData ? withOverall(groupData.avg) : own;
     var count = groupData ? groupData.count : 1;
 
-    $("result-title").textContent = "LASTA-Profil der Gruppe";
+    $("result-title").textContent = "ATLAS-Profil der Gruppe";
     $("result-lead").innerHTML = leadText(group, "die Einschätzung der Gruppe");
 
     var band = overallBandFor(group.overall);

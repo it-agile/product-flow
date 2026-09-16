@@ -65,7 +65,7 @@ params:
   # Quick Check Section
   quickcheck_headline: "Wo steht eure teamübergreifende Lieferfähigkeit?"
   quickcheck_headline_highlight: "15 Aussagen. 5 Minuten. Sofort ein Ergebnis."
-  quickcheck_text: "Der LASTA Quick Check zeigt entlang von fünf Dimensionen – Leadership, Alignment, Steuerung, Teams, Architektur –, wo der Flow zwischen euren Teams hakt. Kostenfrei, ohne Anmeldung, das Ergebnis erscheint sofort im Browser."
+  quickcheck_text: "Der ATLAS Quick Check zeigt entlang von fünf Dimensionen – Alignment, Teams, Leadership, Architektur, Steuerung –, wo der Flow zwischen euren Teams hakt. Kostenfrei, ohne Anmeldung, das Ergebnis erscheint sofort im Browser."
   quickcheck_button: "Quick Check starten"
 
   # About Section

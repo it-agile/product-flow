@@ -7,6 +7,6 @@
 # Beim Wechsel auf den endgueltigen Namen hier und in /etc/quick-check.env
 # dieselbe Zeile aendern, dann: systemctl reload caddy
 
-quick-check.it-team-flow.de {
+atlas-quick-check.it-agile.de {
     reverse_proxy 127.0.0.1:3000
 }
