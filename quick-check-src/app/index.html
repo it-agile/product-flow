@@ -576,6 +576,31 @@
       border: 2px dashed #55554e;
     }
 
+    .swatch-dot {
+      background: rgba(234, 93, 18, 0.55);
+      border-color: var(--accent);
+      border-radius: 50%;
+    }
+
+    .swatch-mean {
+      background: transparent;
+      border: 2px solid #33332e;
+      border-radius: 50%;
+    }
+
+    /* Streifendiagramme der Moderationsansicht: dieselben Werte wie in der
+       Zielscheibe, aber auf einer Geraden statt auf fünf schrägen Achsen. */
+    .strip-wrap {
+      max-width: 620px;
+      margin: 0 auto 26px;
+    }
+
+    .strip-wrap svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     table.scores {
       width: 100%;
       border-collapse: collapse;
@@ -1068,6 +1093,7 @@
             <p class="muted" id="present-hint">Das Diagramm aktualisiert sich automatisch.</p>
             <div class="radar-wrap" id="present-radar"></div>
             <ul class="zone-legend" id="present-legend"></ul>
+            <div class="strip-wrap" id="present-strips" hidden></div>
             <div class="table-wrap">
               <table class="scores">
                 <thead>
@@ -1096,9 +1122,11 @@
           <label for="trainer-room">Raumcode</label>
           <input type="text" id="trainer-room" maxlength="40" placeholder="z. B. kunde-4823"
             autocomplete="off" autocapitalize="none" spellcheck="false">
-          <div class="hint">Nicht nur den Kundennamen nehmen. Das Gruppenprofil ist ohne
-            Anmeldung abrufbar – wer den Code errät, sieht es. Der Zufallszusatz erledigt
-            das; die Teilnehmenden tippen den Code ohnehin nie, er steckt im QR-Code.</div>
+          <div class="hint">Nicht nur den Kundennamen nehmen. Die Auswertung ist ohne
+            Anmeldung abrufbar – wer den Code errät, sieht sie, samt der einzelnen
+            Bewertungen. Namen stehen nirgends, aber der Zufallszusatz ist der
+            eigentliche Schutz; die Teilnehmenden tippen den Code ohnehin nie, er steckt
+            im QR-Code.</div>
         </div>
         <div class="actions">
           <button class="btn" type="button" id="btn-trainer-open">Moderationsansicht öffnen</button>

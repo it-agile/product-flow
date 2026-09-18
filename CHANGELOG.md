@@ -8,6 +8,55 @@ bezeichnet. Neue Einträge oben anfügen.
 
 ---
 
+## 2026-09-18 — Gruppenmodus zeigt jede Bewertung einzeln
+
+Anlass war Feedback aus einem Workshop: Über eine Dimension spreche man erst,
+wenn *fast alle* sie schlecht bewertet haben. Ein gemitteltes Profil verdeckt
+das — eine Dimension, bei der die Hälfte 1 und die andere 5 vergibt, sieht darin
+aus wie durchgängiges Mittelmaß.
+
+### Moderationsansicht (`?present=1`)
+
+- **Punktwolke statt Polygon.** Je Rückmeldung ein Punkt an jeder Achse, quer
+  zur Achse gestreut, ohne Verbindungslinien. Der Gruppenmittelwert bleibt als
+  Ring sichtbar und steht weiter als Zahl an der Achsenbeschriftung.
+- **Fünf Streifendiagramme** unter der Zielscheibe: dieselben Werte auf einer
+  Geraden von 1 bis 5, mit den Zonen als Hintergrund. Dort sind Ballung und
+  Spreizung ablesbar, was über fünf schräge Achsen nicht geht.
+- Die Streuung ist deterministisch (Streuschlüssel je Einreichung), sonst
+  sprängen die Punkte bei jeder Aktualisierung an eine andere Stelle.
+
+Einzelmodus und Teilnehmer-Ergebnis sind unverändert.
+
+### Schnittstelle
+
+- `GET /api/aggregate` liefert zusätzlich `responses`: je Einreichung die
+  Antworten `q0`…`q14` mit einem bedeutungslosen Schlüssel. **Keine**
+  Kontaktdaten, keine Eingangszeit, keine Kennung.
+- **Kein Mindestbestand** vor der Herausgabe — bewusst so entschieden, damit die
+  Punktwolke ab der ersten Rückmeldung sichtbar ist. Damit ist der
+  Zufallszusatz im Raumcode die einzige Schutzmaßnahme, nicht mehr nur eine
+  Empfehlung. Der Hinweis auf der Trainerseite sagt das jetzt ausdrücklich.
+
+### Datenschutzerklärung
+
+Der Satz „Sichtbar wird ausschließlich der Mittelwert der Gruppe je Aussage,
+nicht die einzelne Antwort" war damit falsch. Der Abschnitt „Einsatz in
+Workshops" beschreibt nun, dass die einzelnen Bewertungen angezeigt werden,
+keiner Person zugeordnet sind und mit dem Raumcode abrufbar bleiben.
+
+### Fragebogen
+
+Fünf Aussagen sprachlich geglättet: „Führung sorgt bei Mitarbeitenden und Teams
+für Fokus", „Der Arbeitsablauf wird teamübergreifend im Sinne der Wertschöpfung
+optimiert", und dreimal „Die Teams" statt „Eure Teams"/„Deine Teams". Die
+Zuordnung `q0`…`q14` ist unverändert, bereits erhobene Antworten bleiben
+vergleichbar.
+
+Testsuite: 500 Prüfungen, 0 Fehler.
+
+---
+
 ## 2026-09-03 — Quick Check statt Typeform
 
 Merge-Commit `adabea2`, Stand davor `4c9d3e0`. 17 Commits, 116 geänderte

@@ -15,7 +15,9 @@
  *   POST /api/submit              öffentlich   Antworten, optional Kontaktdaten.
  *                                              Kontaktdaten nur mit Einwilligung
  *                                              und gültiger E-Mail-Adresse.
- *   GET  /api/aggregate?room=     öffentlich   nur Anzahl und Mittelwerte
+ *   GET  /api/aggregate?room=     öffentlich   Anzahl, Mittelwerte je Frage und
+ *                                              die einzelnen Antwortsätze ohne
+ *                                              Kontaktdaten, Zeit und Kennung
  *   GET  /api/qr?room=            öffentlich   QR-Code als SVG
  *   GET  /api/data                Token nötig  Rohdaten inklusive Kontaktdaten
  *   POST /api/reset               Token nötig  Raum oder alles leeren
@@ -47,6 +49,7 @@
  */
 
 const express = require("express");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const QRCode = require("qrcode");
@@ -411,9 +414,26 @@ app.post("/api/submit", (req, res) => {
   }
 });
 
-/* Liefert bewusst nur Anzahl und Mittelwerte je Frage. Keine Rohdaten, keine
- * Kontaktdaten: dieser Endpunkt ist öffentlich, weil ihn jede Teilnehmerin im
- * Teammodus abfragt. */
+/* Stabiler, bedeutungsloser Schlüssel je Einreichung. Er dient allein dazu,
+ * dass die Punktwolke in der Moderationsansicht bei jedem Abruf an derselben
+ * Stelle liegt: der Versatz gegen die Achse wird daraus berechnet, ein
+ * Zufallswert ließe die Punkte alle drei Sekunden springen. Aus dem Schlüssel
+ * lässt sich die Kennung nicht zurückgewinnen, und sortiert wird danach, damit
+ * die Reihenfolge nichts über den Eingang verrät. */
+function streuschluessel(id) {
+  return crypto.createHash("sha256").update(String(id)).digest("hex").slice(0, 8);
+}
+
+/* Anzahl, Mittelwerte je Frage und die einzelnen Antwortsätze. Die
+ * Moderationsansicht zeichnet daraus eine Punktwolke statt eines gemittelten
+ * Profils — im Workshop ist die Streuung die eigentliche Information.
+ *
+ * Herausgegeben werden nur die Zahlen q0…q14. Kontaktdaten, Eingangszeit und
+ * Kennung bleiben drinnen. Der Endpunkt ist trotzdem öffentlich, weil ihn jede
+ * Teilnehmerin im Teammodus abfragt: Wer den Raumcode kennt, sieht damit auch
+ * die einzelnen (namenlosen) Antwortsätze. Der Raumcode mit Zufallszusatz ist
+ * deshalb keine Empfehlung mehr, sondern die eigentliche Schutzmaßnahme —
+ * siehe den Hinweis auf der Trainerseite. */
 app.get("/api/aggregate", (req, res) => {
   const room = cleanRoom(req.query.room);
   const rows = store.submissions.filter((s) => s.room === room);
@@ -430,8 +450,12 @@ app.get("/api/aggregate", (req, res) => {
   const questions = {};
   Object.keys(sums).forEach((k) => { questions[k] = sums[k] / counts[k]; });
 
+  const responses = rows
+    .map((s) => ({ key: streuschluessel(s.id), answers: s.answers }))
+    .sort((a, b) => (a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)));
+
   res.set("Cache-Control", "no-store");
-  res.json({ room: room, count: rows.length, questions: questions });
+  res.json({ room: room, count: rows.length, questions: questions, responses: responses });
 });
 
 app.get("/api/qr", (req, res) => {

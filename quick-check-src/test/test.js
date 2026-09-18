@@ -658,6 +658,104 @@ async function main() {
     win.close();
   }
 
+  section("[10a] Moderationsansicht: Punktwolke statt gemitteltem Profil");
+  /* Baut eine Antwort von /api/aggregate MIT Einzeldaten. Jedes Profil ist ein
+   * Objekt je Dimension; daraus entstehen die 15 Antworten in der
+   * SPEICHERreihenfolge (QUESTION_DIMS), so wie sie wirklich abgelegt sind. */
+  const aggregateMitProfilen = (profile) => {
+    const responses = profile.map((p, i) => {
+      const answers = {};
+      for (let q = 0; q < 15; q++) answers["q" + q] = p[QUESTION_DIMS[Math.floor(q / 3)]];
+      return { key: "schluessel-" + i, answers: answers };
+    });
+    const questions = {};
+    for (let q = 0; q < 15; q++) {
+      questions["q" + q] = responses.reduce((s, x) => s + x.answers["q" + q], 0) / responses.length;
+    }
+    return { room: "kunde", count: responses.length, questions: questions, responses: responses };
+  };
+  /* Leadership geht maximal auseinander (1, 3, 5 – Mittelwert 3), Alignment ist
+   * einig bei 5. Genau diesen Unterschied soll die Ansicht zeigen und der
+   * Mittelwert allein verdeckt ihn. */
+  const PROFILE = [
+    { Leadership: 1, Alignment: 5, Steuerung: 3, Teams: 2, Architektur: 4 },
+    { Leadership: 3, Alignment: 5, Steuerung: 3, Teams: 2, Architektur: 4 },
+    { Leadership: 5, Alignment: 5, Steuerung: 3, Teams: 2, Architektur: 4 }
+  ];
+  const bootPresent = (payload) => boot(teamHtml, {
+    url: "https://atlas-quick-check.it-agile.de/quick-check/?room=kunde&present=1",
+    fetchImpl: () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(payload) })
+  });
+  {
+    const { doc, win } = bootPresent(aggregateMitProfilen(PROFILE));
+    await new Promise(r => setTimeout(r, 40));
+
+    check("kein Gruppenpolygon mehr",
+      doc.querySelectorAll("#present-radar polygon[stroke='#ea5d12']").length === 0);
+    check("ein Punkt je Rückmeldung und Achse",
+      doc.querySelectorAll('#present-radar circle[fill^="rgba"]').length === 15,
+      doc.querySelectorAll('#present-radar circle[fill^="rgba"]').length);
+    /* Der Mittelwert ist ein Ring, kein Strich: ein Strich waere an den
+     * schraegen Achsen von einem Rest der Verbindungslinie nicht zu
+     * unterscheiden, und genau die soll hier fehlen. */
+    check("Mittelwert als Ring, nicht als Strich",
+      doc.querySelectorAll('#present-radar circle[fill="none"]').length === 5 &&
+      doc.querySelectorAll("#present-radar line[stroke='#33332e']").length === 0,
+      doc.querySelectorAll('#present-radar circle[fill="none"]').length);
+    check("Zonen bleiben als Hintergrund erhalten",
+      doc.querySelectorAll("#present-radar polygon[fill='#f4ded9']").length === 1);
+    check("Legende erklärt den Punkt",
+      $(doc, "present-legend").textContent.includes("eine Rückmeldung") &&
+      $(doc, "present-legend").textContent.includes("Mittelwert der Gruppe"));
+    check("Bildbeschreibung nennt die Spreizung",
+      doc.querySelector("#present-radar svg").getAttribute("aria-label")
+        .includes("Leadership 3,0 von 5, teilweise wirksam, Einzelwerte von 1,0 bis 5,0"),
+      doc.querySelector("#present-radar svg").getAttribute("aria-label"));
+    check("Hinweis erklärt die Punkte",
+      $(doc, "present-hint").textContent.includes("Ein Punkt je Rückmeldung"));
+
+    check("Streifendiagramme sichtbar", visible(doc, "present-strips"));
+    check("Streifen zeigen dieselben Punkte",
+      doc.querySelectorAll("#present-strips circle").length === 15,
+      doc.querySelectorAll("#present-strips circle").length);
+    check("Streifen tragen alle fünf Dimensionen",
+      DIMS.every(d => $(doc, "present-strips").textContent.includes(d)),
+      $(doc, "present-strips").textContent);
+    check("Tabelle nennt weiterhin den Mittelwert",
+      doc.querySelectorAll("#present-scores tr").length === 5);
+
+    // Die gestreuten Punkte duerfen nicht aus der Zeichenflaeche fallen.
+    const koords = [...doc.querySelectorAll('#present-radar circle[fill^="rgba"]')]
+      .map(c => [Number(c.getAttribute("cx")), Number(c.getAttribute("cy"))]);
+    check("Punkte liegen in der Zeichenfläche",
+      koords.every(([x, y]) => x > 0 && x < 520 && y > 0 && y < 440), koords.slice(0, 3));
+    check("keine NaN-Koordinaten in der Wolke",
+      !$(doc, "present-radar").innerHTML.includes("NaN") &&
+      !$(doc, "present-strips").innerHTML.includes("NaN"));
+
+    const ersteZeichnung = $(doc, "present-radar").innerHTML;
+    win.close();
+
+    /* Die Ansicht laedt alle drei Sekunden neu. Waere die Streuung zufaellig,
+     * saessen die Punkte danach woanders und das Bild flimmerte. */
+    const zweite = bootPresent(aggregateMitProfilen(PROFILE));
+    await new Promise(r => setTimeout(r, 40));
+    check("Streuung ist bei gleichen Daten identisch",
+      $(zweite.doc, "present-radar").innerHTML === ersteZeichnung);
+    zweite.win.close();
+  }
+  {
+    /* Ein Server ohne Einzeldaten – etwa ein noch nicht uebertragener Stand.
+     * Dann faellt die Ansicht auf das gemittelte Profil zurueck, statt eine
+     * leere Zielscheibe zu zeigen. */
+    const { doc, win } = bootPresent(aggregate(7, flat(4)));
+    await new Promise(r => setTimeout(r, 40));
+    check("ohne Einzeldaten wieder das gemittelte Profil",
+      doc.querySelectorAll("#present-radar polygon[stroke='#ea5d12']").length === 1);
+    check("ohne Einzeldaten keine Streifen", $(doc, "present-strips").hidden);
+    win.close();
+  }
+
   section("[11] Backend: echter Server");
   const PORT = 31739;
   const DATA = path.join(require("os").tmpdir(), "qc-test-" + Date.now() + ".json");
@@ -735,6 +833,30 @@ async function main() {
     check("Aggregat liefert KEINE Rohdaten", agg.submissions === undefined && agg.contact === undefined);
     check("Aggregat nicht zwischengespeichert", r.headers.get("cache-control") === "no-store");
 
+    /* Die Moderationsansicht zeichnet eine Punktwolke, dafuer braucht sie die
+     * einzelnen Antwortsaetze. Herausgehen duerfen nur die Zahlen: Kennung,
+     * Eingangszeit und Kontaktdaten bleiben drinnen. */
+    check("Aggregat liefert die Einzelantworten",
+      Array.isArray(agg.responses) && agg.responses.length === 2,
+      agg.responses && agg.responses.length);
+    check("Einzelantwort traegt nur Schluessel und Antworten",
+      agg.responses.every(x => Object.keys(x).sort().join(",") === "answers,key"),
+      agg.responses.map(x => Object.keys(x).sort().join(",")));
+    check("Einzelantwort ohne Kennung, Zeit und Raum",
+      agg.responses.every(x => x.id === undefined && x.ts === undefined && x.room === undefined));
+    check("Streuschluessel verraet die Kennung nicht",
+      agg.responses.every(x => /^[0-9a-f]{8}$/.test(x.key) && x.key !== "a1" && x.key !== "a2"),
+      agg.responses.map(x => x.key));
+    check("Einzelantworten spiegeln beide Einreichungen",
+      agg.responses.map(x => x.answers.q0).sort().join(",") === "2,4",
+      agg.responses.map(x => x.answers.q0));
+    /* Waere der Schluessel je Abruf neu, spraengen die Punkte in der
+     * Moderationsansicht alle drei Sekunden an eine andere Stelle. */
+    const aggAgain = await (await fetch(base + "/api/aggregate?room=kunde")).json();
+    check("Streuschluessel bleibt ueber Abrufe gleich",
+      aggAgain.responses.map(x => x.key).join("|") === agg.responses.map(x => x.key).join("|"),
+      aggAgain.responses.map(x => x.key));
+
     r = await fetch(base + "/api/aggregate?room=hamburg");
     const agg2 = await r.json();
     check("Räume sind getrennt", agg2.count === 1 && agg2.questions.q0 === 5, agg2);
@@ -754,6 +876,15 @@ async function main() {
       source: "it-team-flow.de/quick-check"
     });
     check("Einreichung mit Kontaktdaten angenommen", r.status === 200);
+
+    /* Der Raum "public" haelt jetzt eine Einreichung MIT Kontaktdaten. Das
+     * Aggregat ist oeffentlich abrufbar und muss sie trotzdem draussen lassen. */
+    const aggLead = await (await fetch(base + "/api/aggregate?room=public")).json();
+    check("Aggregat gibt auch bei Kontaktdaten nur Zahlen heraus",
+      aggLead.responses.length === 1 &&
+      JSON.stringify(aggLead).indexOf("example.org") === -1 &&
+      JSON.stringify(aggLead).indexOf("Ralf") === -1,
+      JSON.stringify(aggLead).slice(0, 200));
 
     r = await post("/api/submit", { id: "lead2", answers: answersFor(3), contact: "kein objekt" });
     check("abgelehnt: Kontaktdaten kein Objekt", r.status === 400, r.status);

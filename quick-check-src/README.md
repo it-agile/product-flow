@@ -5,7 +5,7 @@ Ein Fragebogen, zwei Betriebsarten, **eine Codebasis**.
 | | Einzelmodus | Teammodus |
 |---|---|---|
 | Wer | eine Person auf der Landingpage | mehrere Personen im Workshop |
-| Auswertung | eigenes Profil | Mittelwert der Gruppe, aktualisiert sich laufend |
+| Auswertung | eigenes Profil | jede Bewertung als Punkt, dazu der Mittelwert; aktualisiert sich laufend |
 | Zugang | Link von `it-team-flow.de` | QR-Code und Raumcode |
 | Kontaktdaten | ja, als Lead | nein |
 | Betrieb | statisch, GitHub Pages | Node-Server, eigene Hetzner-Cloud-Instanz |
@@ -94,9 +94,11 @@ tun ist".
   braucht die Datenschutzerklärung dazu einen Satz und es braucht eine
   Löschfrist. `Caddyfile.example` enthält keine `log`-Anweisung, aber die
   Voreinstellung der Distribution ist damit nicht ausgeschlossen.
-- **Mindestzahl an Rückmeldungen**, bevor im Teammodus ein Gruppenprofil
-  erscheint. Bei drei oder vier Teilnehmenden lassen sich einzelne Antworten aus
-  dem Mittelwert zurückrechnen.
+- **Der Raumcode trägt den Schutz allein.** Seit die Moderationsansicht jede
+  Bewertung einzeln zeigt, liefert `GET /api/aggregate` die einzelnen
+  Antwortsätze mit — namenlos, aber ohne Mindestzahl. Eine Schwelle war erwogen
+  und am 17.09.2026 verworfen. Siehe „Offene Punkte", Abschnitt „Erratbare
+  Raumcodes".
 - **Zustellbarkeit der Benachrichtigung.** Sie hängt an einem fremden
   Postausgangsserver. Fällt der aus, bleibt die Anfrage gespeichert und trägt
   `notify: "fehlgeschlagen"`, aber niemand erfährt davon, solange keiner
@@ -436,12 +438,13 @@ deluser quickcheck
 
 1. Raumcode wählen — **nicht nur den Kundennamen**, sondern mit einem nicht
    erratbaren Zusatz: `kunde-4823` statt `kunde`. Grund: `GET /api/aggregate` ist
-   öffentlich, wer den Raumcode errät, sieht das Gruppenprofil. Siehe „Offene
-   Punkte". Die Teilnehmenden tippen den Code nie, er steckt im QR-Code.
+   öffentlich, wer den Raumcode errät, sieht die Auswertung samt der einzelnen
+   Bewertungen. Siehe „Offene Punkte". Die Teilnehmenden tippen den Code nie, er
+   steckt im QR-Code.
 2. Moderationsansicht öffnen und projizieren:
    `https://atlas-quick-check.it-agile.de/quick-check/?room=kunde-4823&present=1`
-   Sie zeigt QR-Code, Adresse, Raumcode, Anzahl der Rückmeldungen und das
-   Gruppenprofil. Aktualisierung alle drei Sekunden.
+   Sie zeigt QR-Code, Adresse, Raumcode, Anzahl der Rückmeldungen und die
+   Auswertung. Aktualisierung alle drei Sekunden.
 3. Teilnehmende scannen den QR-Code, beantworten 15 Aussagen und sehen danach
    das Gruppenprofil mit ihren eigenen Werten als gestrichelte Linie darüber.
 4. Nach dem Workshop über die Moderationsansicht zurücksetzen. Das fragt nach
@@ -463,7 +466,7 @@ curl -H "x-admin-token: DEIN-TOKEN" \
 | Endpunkt | Zugang | Zweck |
 |---|---|---|
 | `POST /api/submit` | öffentlich | Antworten, optional Kontaktdaten. Verlangt ein Feld `id`. Begrenzt auf 30 Einreichungen je IP in 10 Minuten. Kontaktdaten nimmt der Server nur mit `consent: true` und gültiger E-Mail-Adresse an, sonst 400 (`consent_required`, `invalid_email`). Das Formular prüft beides auch — aber ein Formular ist keine Zugangskontrolle. |
-| `GET /api/aggregate?room=` | öffentlich | **nur** Anzahl und Mittelwert je Frage. Keine Rohdaten, keine Kontaktdaten. |
+| `GET /api/aggregate?room=` | öffentlich | Anzahl, Mittelwert je Frage und unter `responses` die einzelnen Antwortsätze (`q0`…`q14`) mit einem bedeutungslosen Streuschlüssel. **Keine** Kontaktdaten, keine Eingangszeit, keine Kennung. Die Moderationsansicht zeichnet daraus die Punktwolke. |
 | `GET /api/qr?room=` | öffentlich | QR-Code als SVG |
 | `GET /api/data` | Token | Rohdaten inklusive Kontaktdaten, optional nach Raum |
 | `POST /api/reset` | Token | Raum leeren, `{"room":"*"}` leert alles |
@@ -497,17 +500,21 @@ und die Testhilfe `aggregate` bildet `q0`…`q14` über `QUESTION_DIMS` ab, nich
 
 ## Offene Punkte
 
-- **Mindestzahl für Anonymität, und erratbare Raumcodes.** Zwei Punkte, die
-  sich gegenseitig verschärfen. `GET /api/aggregate?room=` ist öffentlich, und
-  zwar mit Absicht: Jede Teilnehmerin fragt ihn ab, um das Gruppenprofil zu
-  sehen. Wer den Raumcode kennt oder errät, sieht es aber ebenso — und bei drei
-  oder vier Teilnehmenden lassen sich einzelne Antworten aus dem Mittelwert
-  zurückrechnen. Ein Aussenstehender könnte so an das Ergebnisprofil eines
-  Kundenworkshops kommen. Zwei Abhilfen, beide bewusst noch nicht gebaut: das
-  Gruppenprofil erst ab einer Mindestzahl von Rückmeldungen zeigen, und
-  Raumcodes serverseitig mit einem Zufallsanteil erzeugen, statt sie frei
-  wählen zu lassen. Bis dahin gilt die Handreichung unter „Workshop
-  durchführen": Raumcode mit nicht erratbarem Zusatz.
+- **Erratbare Raumcodes.** `GET /api/aggregate?room=` ist öffentlich, und zwar
+  mit Absicht: Jede Teilnehmerin fragt ihn ab, um das Gruppenprofil zu sehen.
+  Wer den Raumcode kennt oder errät, sieht es aber ebenso — und seit die
+  Moderationsansicht jede Bewertung einzeln zeigt, liefert der Endpunkt die
+  einzelnen Antwortsätze mit. Sie tragen keinen Namen, keine Kennung und keine
+  Eingangszeit, ein Zurückrechnen aus dem Mittelwert ist aber auch nicht mehr
+  nötig: man liest sie direkt.
+
+  **Damit ist der Zufallszusatz im Raumcode keine Empfehlung mehr, sondern die
+  eigentliche Schutzmaßnahme.** Eine Mindestzahl an Rückmeldungen, bevor die
+  Einzeldaten herausgehen, war erwogen und am 17.09.2026 bewusst verworfen — im
+  Workshop will man die Punktwolke ab der ersten Rückmeldung sehen. Offen bleibt
+  die zweite Abhilfe: Raumcodes serverseitig mit einem Zufallsanteil erzeugen,
+  statt sie frei wählen zu lassen. Bis dahin gilt die Handreichung unter
+  „Workshop durchführen".
 - **Formulierung der Aussagen.** Das Subjekt wechselt zwischen „wir", „eure
   Teams" und „deine Teams"; die Aussagen 13 und 15 fragen mehrere Bedingungen
   gleichzeitig ab. Beides stammt wörtlich aus dem Typeform. Eine Änderung

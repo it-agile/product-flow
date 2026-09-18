@@ -71,19 +71,19 @@
   var QUESTIONS = [
     { dim: "Leadership", text: "Entscheidungen haben den Kunden im Fokus." },
     { dim: "Leadership", text: "Wir übernehmen Verantwortung für Entscheidungen." },
-    { dim: "Leadership", text: "Führung fokussiert Mitarbeiter und Teams." },
+    { dim: "Leadership", text: "Führung sorgt bei Mitarbeitenden und Teams für Fokus." },
 
     { dim: "Alignment", text: "Allen ist klar, welche Initiativen in deinem Unternehmen im Fokus stehen." },
     { dim: "Alignment", text: "Deine Teams wissen genau, wie ihre Arbeit auf Initiativen einzahlt." },
     { dim: "Alignment", text: "Teams und Abteilungen unterstützen sich bei der Erreichung von Zielen." },
 
     { dim: "Steuerung", text: "Die anfallende Arbeit bekommen wir in der Regel gut abgearbeitet." },
-    { dim: "Steuerung", text: "Der Arbeitsablauf wird wertschöpfungsübergreifend optimiert." },
+    { dim: "Steuerung", text: "Der Arbeitsablauf wird teamübergreifend im Sinne der Wertschöpfung optimiert." },
     { dim: "Steuerung", text: "Abhängigkeiten sind bekannt und werden frühzeitig adressiert." },
 
-    { dim: "Teams", text: "Eure Teams kennen die Kundenerwartungen." },
-    { dim: "Teams", text: "Eure Teams reflektieren regelmäßig über teaminterne Verbesserungsmöglichkeiten." },
-    { dim: "Teams", text: "Deine Teams gehen Probleme teamübergreifend an." },
+    { dim: "Teams", text: "Die Teams kennen die Kundenerwartungen." },
+    { dim: "Teams", text: "Die Teams reflektieren regelmäßig über teaminterne Verbesserungsmöglichkeiten." },
+    { dim: "Teams", text: "Die Teams gehen Probleme teamübergreifend an." },
 
     { dim: "Architektur", text: "Businessrelevante Funktionalitäten werden nach der Übergabe an ein anderes Team ohne Stocken sofort weiterentwickelt." },
     { dim: "Architektur", text: "Jedes Team kann unabhängig von anderen Teams businessrelevante Funktionen in die Produktion überführen." },
@@ -268,6 +268,29 @@
 
   function api(path) { return API + path; }
 
+  /* Streuung der Punktwolke. Gleiche Werte lägen sonst exakt aufeinander — bei
+   * fünf Personen sähe man drei Punkte statt fünf, also gerade das nicht, worum
+   * es geht. Ein Zufallswert scheidet aus: die Moderationsansicht lädt alle drei
+   * Sekunden neu, die Punkte würden tanzen. Aus Schlüssel und Achse entsteht
+   * deshalb immer derselbe Versatz.
+   *
+   * FNV-1a mit der in JavaScript üblichen Ersetzung der Multiplikation durch
+   * Schieben und Addieren: h * 16777619 überschritte die 53 Bit, in denen eine
+   * Gleitkommazahl noch ganzzahlig rechnet. */
+  function hash32(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) {
+      h = (h ^ s.charCodeAt(i)) >>> 0;
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return h;
+  }
+
+  /** Immer derselbe Wert zwischen -1 und 1 für Schlüssel und Achse. */
+  function jitter(key, i) {
+    return ((hash32(key + "|" + i) % 2001) / 1000) - 1;
+  }
+
   // =====================================================================
   // AUSWERTUNG
   // =====================================================================
@@ -313,15 +336,36 @@
 
   /* series: Liste von { avg, fill, stroke, dash, label, dots }.
    * Das erste Element ist die Leitreihe: es bestimmt die Werte an den Achsen
-   * und die Beschreibung für Screenreader. */
-  function renderRadar(targetId, legendId, series) {
+   * und die Beschreibung für Screenreader.
+   *
+   * opts (optional):
+   *   cloud  Liste von { key, avg } — je Rückmeldung ein Punkt an jeder Achse,
+   *          ohne Verbindung untereinander. Dann darf series leer sein, und
+   *          opts.mean übernimmt die Rolle der Leitreihe.
+   *   mean   Mittelwerte je Dimension, als Marke quer zur Achse.
+   *   legend Zusätzliche Legendeneinträge { swatch, label }. */
+  function renderRadar(targetId, legendId, series, opts) {
+    opts = opts || {};
     var w = 520, h = 440, cx = w / 2, cy = h / 2, R = 125;
     var n = DIMENSIONS.length;
-    var primary = series[0].avg;
+    var cloud = opts.cloud || [];
+    var primary = series.length ? series[0].avg : (opts.mean || {});
 
     function point(i, r) {
       var a = (Math.PI * 2 * i) / n - Math.PI / 2;
       return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+    }
+
+    /** Richtungsvektor der Achse i, Länge 1. */
+    function unit(i) {
+      var a = (Math.PI * 2 * i) / n - Math.PI / 2;
+      return [Math.cos(a), Math.sin(a)];
+    }
+
+    /* Ein Punkt auf der Achse i beim Wert v, quer dazu um off Pixel versetzt. */
+    function offAxis(i, v, off) {
+      var r = (R * v) / 5, u = unit(i);
+      return [cx + u[0] * r - u[1] * off, cy + u[1] * r + u[0] * off];
     }
 
     function ring(value) {
@@ -343,7 +387,13 @@
     }
 
     var described = DIMENSIONS.map(function (d) {
-      return d + " " + fmt(primary[d] || 0) + " von 5, " + zoneFor(primary[d] || 0).label;
+      var s = d + " " + fmt(primary[d] || 0) + " von 5, " + zoneFor(primary[d] || 0).label;
+      if (cloud.length) {
+        var vals = cloud.map(function (m) { return m.avg[d] || 0; });
+        s += ", Einzelwerte von " + fmt(Math.min.apply(null, vals)) +
+          " bis " + fmt(Math.max.apply(null, vals));
+      }
+      return s;
     }).join(". ");
 
     var svg = '<svg viewBox="0 0 ' + w + " " + h +
@@ -389,6 +439,34 @@
       }
     });
 
+    /* Punktwolke: je Rückmeldung ein Punkt an jeder Achse, bewusst ohne
+     * Verbindung. Ein durchgezogenes Profil je Person ergäbe fünf verschlungene
+     * Fünfecke; im Workshop interessiert aber, wo sich Bewertungen ballen und
+     * wo sie auseinandergehen, nicht das Einzelprofil. */
+    cloud.forEach(function (m) {
+      for (var i3 = 0; i3 < n; i3++) {
+        var v3 = m.avg[DIMENSIONS[i3]] || 0;
+        /* Der Versatz wächst mit dem Abstand zur Mitte: nah am Mittelpunkt
+         * liegen die Achsen dicht beieinander, ein fester Wert schöbe Punkte
+         * in den Nachbarsektor. */
+        var spread = Math.min(15, Math.max(6, (R * v3) / 5 * 0.12));
+        var pc = offAxis(i3, v3, jitter(m.key, i3) * spread);
+        svg += '<circle cx="' + pc[0].toFixed(1) + '" cy="' + pc[1].toFixed(1) +
+          '" r="5.5" fill="rgba(234,93,18,0.55)" stroke="#ffffff" stroke-width="1"/>';
+      }
+    });
+
+    /* Der Mittelwert als Ring, nicht als Strich: ein Strich quer zur Achse
+     * liest sich an den schrägen Achsen wie ein Rest der Verbindungslinie, die
+     * hier gerade absichtlich fehlt. Ein Ring ist eine Marke, keine Linie. */
+    if (opts.mean) {
+      for (var i6 = 0; i6 < n; i6++) {
+        var p6 = offAxis(i6, opts.mean[DIMENSIONS[i6]] || 0, 0);
+        svg += '<circle cx="' + p6[0].toFixed(1) + '" cy="' + p6[1].toFixed(1) +
+          '" r="9.5" fill="none" stroke="#33332e" stroke-width="2.5"/>';
+      }
+    }
+
     // Ringzahlen auf der senkrechten Achse nach unten: dort verläuft bei fünf
     // Achsen keine Speiche, es gibt also keine Überdeckung.
     for (var lvl2 = 1; lvl2 <= 5; lvl2++) {
@@ -420,8 +498,85 @@
       series.forEach(function (s) {
         leg += '<li><span class="swatch ' + s.swatch + '"></span>' + esc(s.label) + "</li>";
       });
+      (opts.legend || []).forEach(function (e) {
+        leg += '<li><span class="swatch ' + e.swatch + '"></span>' + esc(e.label) + "</li>";
+      });
       $(legendId).innerHTML = leg;
     }
+  }
+
+  /* Streifendiagramm je Dimension: die Skala 1 bis 5 mit den Zonen als
+   * Hintergrund, darauf ein Punkt je Rückmeldung und die Marke des Mittelwerts.
+   *
+   * Die Zielscheibe zeigt dieselben Punkte, staucht sie aber nahe der Mitte und
+   * verteilt sie über fünf schräge Achsen. Hier liegen Ballung und Spreizung
+   * nebeneinander auf einer Geraden — das ist die Ansicht, an der im Workshop
+   * tatsächlich diskutiert wird.
+   *
+   * Die Skala beginnt bei 1, nicht bei 0: 0 ist keine mögliche Bewertung. Die
+   * Zonengrenzen liegen deshalb an derselben Stelle wie auf der Zielscheibe,
+   * der Streifen nutzt die Breite aber ganz aus. */
+  function renderStrips(targetId, members, mean) {
+    var w = 560, x0 = 136, x1 = 532, rowH = 58, top = 30, pad = 8;
+    var h = top + DIMENSIONS.length * rowH;
+    var stripH = 26;
+
+    function x(v) { return x0 + ((v - 1) / 4) * (x1 - x0); }
+
+    var svg = '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="' +
+      esc("Verteilung der " + members.length + " Rückmeldungen je Dimension auf der Skala 1 bis 5. " +
+        "Dieselben Werte wie in der Zielscheibe darüber.") + '">';
+
+    // Skalenbeschriftung, einmal über dem obersten Streifen
+    for (var t = 1; t <= 5; t++) {
+      svg += '<text x="' + x(t).toFixed(1) + '" y="16" text-anchor="middle" font-size="11" ' +
+        'fill="#55554e">' + t + "</text>";
+    }
+
+    DIMENSIONS.forEach(function (d, i) {
+      var y = top + i * rowH;
+      var mid = y + stripH / 2;
+
+      /* Zonen als Hintergrund. An beiden Enden ragt der Streifen über die Skala
+       * hinaus: ein Punkt bei 1 oder bei 5 säße sonst halb daneben. */
+      var prev = 1;
+      ZONES.forEach(function (z, zi) {
+        if (z.to <= prev) return;
+        var xa = (zi === 0 ? x(prev) - pad : x(prev));
+        var xb = (z.to >= 5 ? x(z.to) + pad : x(z.to));
+        svg += '<rect x="' + xa.toFixed(1) + '" y="' + y + '" width="' +
+          (xb - xa).toFixed(1) + '" height="' + stripH + '" fill="' + z.fill + '"/>';
+        prev = z.to;
+      });
+
+      // Gitter bei den ganzen Werten
+      for (var g = 2; g <= 4; g++) {
+        svg += '<line x1="' + x(g).toFixed(1) + '" y1="' + y + '" x2="' + x(g).toFixed(1) +
+          '" y2="' + (y + stripH) + '" stroke="#ffffff" stroke-width="1.5"/>';
+      }
+
+      var v = mean ? (mean[d] || 0) : 0;
+      svg += '<text x="' + (x0 - 14) + '" y="' + (mid - 1) + '" text-anchor="end" font-size="14" ' +
+        'font-weight="700" fill="#222">' + esc(d) + "</text>";
+      svg += '<text x="' + (x0 - 14) + '" y="' + (mid + 14) + '" text-anchor="end" font-size="11.5" ' +
+        'fill="#55554e">' + (members.length ? "Mittel " + fmt(v) : "—") + "</text>";
+
+      // Ein Punkt je Rückmeldung, senkrecht gestreut wie in der Zielscheibe
+      members.forEach(function (m) {
+        var mv = m.avg[d] || 0;
+        var cy = mid + jitter(m.key, i) * (stripH / 2 - 4);
+        svg += '<circle cx="' + x(mv).toFixed(1) + '" cy="' + cy.toFixed(1) +
+          '" r="5.5" fill="rgba(234,93,18,0.55)" stroke="#ffffff" stroke-width="1"/>';
+      });
+
+      if (members.length) {
+        svg += '<line x1="' + x(v).toFixed(1) + '" y1="' + (y - 4) + '" x2="' + x(v).toFixed(1) +
+          '" y2="' + (y + stripH + 4) + '" stroke="#33332e" stroke-width="3" stroke-linecap="round"/>';
+      }
+    });
+
+    svg += "</svg>";
+    $(targetId).innerHTML = svg;
   }
 
   /** Balken mit Zonenhintergrund und Marke beim Messwert. */
@@ -705,12 +860,34 @@
       avg: group.avg, fill: "rgba(234,93,18,0.30)", stroke: "#ea5d12", dots: true,
       label: "Gruppe", column: "Mittelwert", swatch: "swatch-group"
     }];
-    renderRadar("present-radar", "present-legend", series);
+    var members = groupData && groupData.members ? groupData.members : [];
+
+    /* Im Workshop zeigt die Ansicht jede Bewertung einzeln: über einen Punkt
+     * spricht man erst, wenn er nicht allein steht. Ein gemitteltes Profil
+     * verdeckt gerade das — eine Dimension, bei der die Hälfte 1 und die andere
+     * 5 vergibt, sieht darin aus wie durchgängiges Mittelmaß. */
+    if (members.length) {
+      renderRadar("present-radar", "present-legend", [], {
+        cloud: members,
+        mean: group.avg,
+        legend: [
+          { swatch: "swatch-dot", label: "eine Rückmeldung" },
+          { swatch: "swatch-mean", label: "Mittelwert der Gruppe" }
+        ]
+      });
+      renderStrips("present-strips", members, group.avg);
+      $("present-strips").hidden = false;
+    } else {
+      renderRadar("present-radar", "present-legend", series);
+      $("present-strips").hidden = true;
+    }
     renderScores("present-scores", null, series);
 
     $("present-hint").textContent = count === 0
       ? "Noch keine Rückmeldungen. Das Diagramm aktualisiert sich automatisch."
-      : "Das Diagramm aktualisiert sich automatisch.";
+      : (members.length
+        ? "Ein Punkt je Rückmeldung und Dimension. Die Ansicht aktualisiert sich automatisch."
+        : "Das Diagramm aktualisiert sich automatisch.");
   }
 
   function refreshView() {
@@ -732,7 +909,19 @@
   function loadAggregate() {
     if (!HAS_BACKEND) return Promise.resolve(null);
     return fetchJson(api("/api/aggregate?room=" + encodeURIComponent(ROOM))).then(function (d) {
-      groupData = { count: d.count || 0, avg: scoresFromQuestionMeans(d.questions || {}).avg };
+      /* members bleibt leer, wenn der Server die Einzeldaten nicht mitliefert.
+       * Die Moderationsansicht fällt dann auf das gemittelte Profil zurück,
+       * statt eine leere Zielscheibe zu zeigen. */
+      groupData = {
+        count: d.count || 0,
+        avg: scoresFromQuestionMeans(d.questions || {}).avg,
+        members: (d.responses || []).map(function (r, i) {
+          return {
+            key: typeof r.key === "string" && r.key ? r.key : "r" + i,
+            avg: scoresFromAnswers(r.answers || {}).avg
+          };
+        })
+      };
       updateCounter();
       refreshView();
       return groupData;
