@@ -33,7 +33,22 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : null;
   }
 
-  var ROOM = (param("room") || CFG.room || "default").slice(0, 40);
+  /* Team- und Einzelmodus behandeln den Raum grundlegend verschieden.
+   *
+   * Team: Raum kommt AUSSCHLIESSLICH aus der URL, kein Ruckfall auf "default"
+   * mehr. Ohne eigenen Raumcode (oder mit dem Codewort "default") landete
+   * sonst jeder Aufruf ohne QR-Code im selben geteilten Topf wie alle
+   * anderen -- samt der Leads aus dem Einzelmodus. Siehe README, Abschnitt
+   * "Offene Punkte".
+   *
+   * Solo: Jeder Durchlauf bekommt eine eigene, zufaellige Kennung als Raum.
+   * Es gibt dort ohnehin keine Gruppenauswertung; die Kennung dient nur der
+   * Ablage der Leads, und zwei Durchlaeufe duerfen sich nie denselben Topf
+   * teilen. */
+  var ROOM = MODE === "solo"
+    ? ("solo-" + uuid().replace(/-/g, "")).slice(0, 40)
+    : (param("room") || "").slice(0, 40);
+  var NO_ROOM = MODE === "team" && (!ROOM || ROOM === "default");
   var PRESENT = MODE === "team" && param("present") === "1";
   var TRAINER = MODE === "team" && param("trainer") === "1";
 
@@ -686,7 +701,7 @@
   var groupData = null;   // { count, avg } aus /api/aggregate
   var pollTimer = null;
   var SCREENS = ["screen-intro", "screen-questions", "screen-contact", "screen-result", "screen-present",
-    "screen-trainer"];
+    "screen-trainer", "screen-noroom"];
 
   function show(id) {
     SCREENS.forEach(function (s) { $(s).hidden = s !== id; });
@@ -1356,6 +1371,8 @@
   if (TRAINER) {
     initTrainer();
     show("screen-trainer");
+  } else if (NO_ROOM) {
+    show("screen-noroom");
   } else if (PRESENT) {
     rememberRoom(ROOM);
     document.getElementById("main").classList.add("wide");

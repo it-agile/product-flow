@@ -443,10 +443,29 @@ async function main() {
         body.contact.message === "Wir stocken zwischen vier Teams.", body.contact);
       check("keine Altfelder rolle/teams mehr im Payload",
         body.contact.role === undefined && body.contact.teams === undefined);
-      check("Raum mitgesendet", body.room === "default");
+      check("Raum ist eine eindeutige Kennung, nicht mehr der geteilte Standardraum",
+        typeof body.room === "string" && body.room.startsWith("solo-") && body.room !== "default", body.room);
       check("Quelle gesetzt", body.source === "it-team-flow.de/quick-check");
     }
     check("Erfolgs-Hinweis", $(doc, "result-notes").textContent.includes("Danke"));
+  }
+  {
+    // Zwei Durchlaeufe duerfen nie denselben Topf teilen.
+    const withApi = soloWith("https://qc.example.org");
+    const eins = boot(withApi);
+    const zwei = boot(withApi);
+    answerAllSteps(eins.doc, eins.win, MIXED);
+    fillContact(eins.doc, eins.win);
+    submitContact(eins.doc, eins.win);
+    answerAllSteps(zwei.doc, zwei.win, MIXED);
+    fillContact(zwei.doc, zwei.win);
+    submitContact(zwei.doc, zwei.win);
+    await new Promise(r => setTimeout(r, 40));
+    const raumVon = ctx => JSON.parse(ctx.calls.find(c => c.url.indexOf("/api/submit") !== -1).init.body).room;
+    check("zwei Einzelmodus-Durchläufe bekommen verschiedene Räume",
+      raumVon(eins) !== raumVon(zwei), [raumVon(eins), raumVon(zwei)]);
+    eins.win.close();
+    zwei.win.close();
   }
   {
     const withApi = soloWith("https://qc.example.org");
@@ -600,6 +619,36 @@ async function main() {
     check("Zähler zeigt 4 Rückmeldungen", $(doc, "counter").textContent === "4 Rückmeldungen");
     check("Hinweis nennt Anzahl", $(doc, "result-notes").textContent.includes("4 Rückmeldungen"));
     check("CTA im Teammodus verborgen", $(doc, "cta-box").hidden);
+    win.close();
+  }
+
+  section("[9a] Teammodus: kein Aufruf ohne eigenen Raum");
+  /* "default" war der Topf, in dem sich Teammodus-Testlaeufe und die Leads aus
+   * dem Einzelmodus mischten. Ein Aufruf ohne eigenen Raumcode -- oder mit dem
+   * Codewort "default" -- darf deshalb weder Fragebogen noch Moderations-
+   * ansicht zeigen, sondern nur den Hinweis. */
+  {
+    const { doc, win } = boot(teamHtml, { url: "https://atlas-quick-check.it-agile.de/quick-check/" });
+    check("Hinweis auf fehlenden Raum sichtbar", visible(doc, "screen-noroom"));
+    check("kein Start ohne Raum möglich", !visible(doc, "screen-intro"));
+    win.close();
+  }
+  {
+    const { doc, win } = boot(teamHtml, { url: "https://atlas-quick-check.it-agile.de/quick-check/?room=default" });
+    check("Raum \"default\" ausdrücklich ebenfalls blockiert", visible(doc, "screen-noroom"));
+    win.close();
+  }
+  {
+    const { doc, win } = boot(teamHtml,
+      { url: "https://atlas-quick-check.it-agile.de/quick-check/?present=1" });
+    check("Moderationsansicht ohne Raum ebenfalls blockiert", visible(doc, "screen-noroom"));
+    check("keine Moderationsansicht ohne Raum", !visible(doc, "screen-present"));
+    win.close();
+  }
+  {
+    const { doc, win } = boot(teamHtml,
+      { url: "https://atlas-quick-check.it-agile.de/quick-check/?trainer=1" });
+    check("Trainerseite bleibt ohne eigenen Raum erreichbar", visible(doc, "screen-trainer"));
     win.close();
   }
 

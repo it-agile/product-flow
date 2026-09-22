@@ -450,16 +450,32 @@ deluser quickcheck
 4. Nach dem Workshop über die Moderationsansicht zurücksetzen. Das fragt nach
    dem `ADMIN_TOKEN` und leert **nur diesen Raum**.
 
-Beim Einrichten ohne `?room=` zu testen, füllt den Raum `default` — denselben,
-in dem die Leads aus dem Einzelmodus landen. Dafür lieber einen eigenen
-Raumnamen verwenden.
+**Seit dem 22.09.2026 verlangt der Teammodus zwingend einen eigenen Raumcode.**
+Ein Aufruf ohne `?room=` oder mit dem Codewort `default` zeigt nur noch den
+Hinweis „Kein Raum angegeben" — weder Fragebogen noch Moderationsansicht.
+Grund: Vorher landeten Testläufe ohne eigenen Raumcode im selben Topf `default`
+wie die Leads aus dem Einzelmodus, sodass wer später diesen Topf erneut traf
+(z. B. über `https://atlas-quick-check.it-agile.de/quick-check/` ohne
+Parameter), das alte Gruppenprofil mit dem eigenen neuen Ergebnis gemischt
+sah. Das Einrichten ohne `?room=` füllt seither keinen Topf mehr; ein eigener
+Raumname ist jetzt Voraussetzung, nicht mehr nur Empfehlung.
 
-Leads aus dem Einzelmodus exportieren:
+Der Einzelmodus bekommt seit demselben Datum ebenfalls keinen festen Raum
+mehr: jeder Durchlauf erhält eine eigene, zufällige Kennung (`solo-…`), es
+gibt dort ohnehin keine Gruppenauswertung. Leads aus dem Einzelmodus lassen
+sich deshalb nicht mehr über einen festen Raumnamen abrufen, sondern über die
+Quelle:
 
 ```bash
 curl -H "x-admin-token: DEIN-TOKEN" \
-  https://atlas-quick-check.it-agile.de/api/data?room=default
+  https://atlas-quick-check.it-agile.de/api/data \
+  | jq '.submissions[] | select(.source=="it-team-flow.de/quick-check")'
 ```
+
+Einträge, die vor dem 22.09.2026 im gemeinsamen Raum `default` entstanden
+sind, bleiben davon unberührt und liegen weiterhin dort — die Umstellung wirkt
+nur auf neue Einreichungen. Dieser Altbestand lässt sich unverändert über
+`GET /api/data?room=default` abrufen und bei Bedarf gesondert bereinigen.
 
 ## API
 
@@ -500,6 +516,20 @@ und die Testhilfe `aggregate` bildet `q0`…`q14` über `QUESTION_DIMS` ab, nich
 
 ## Offene Punkte
 
+- **Der Lead-Raum `default` liegt mit offen — für Altdaten vor dem 22.09.2026.**
+  Bis dahin landeten Einzelmodus-Leads und ungekennzeichnete Teammodus-Läufe im
+  selben, leicht erratbaren Raum `default`; `GET /api/aggregate?room=default`
+  gab dessen 15er-Bewertungen für jeden heraus, der den Code kannte. Seit dem
+  22.09.2026 bekommt jeder Einzelmodus-Durchlauf einen eigenen, zufälligen Raum
+  und der Teammodus verweigert `default` ganz — für neue Einreichungen ist das
+  Problem damit strukturell behoben. Der Altbestand im Raum `default` bleibt
+  aber unverändert liegen und über `?room=default` weiterhin genauso abrufbar.
+  Kontaktdaten sind davon nicht betroffen, nur die 15 Bewertungen. **Richtung
+  für den nächsten Aufräumakt: den Altbestand im Raum `default` gesondert
+  sichern und den Raum dann leeren.** Vorher klären, dass die gespeicherte
+  Einreichung heute das Auffangnetz für einen misslungenen Mailversand ist
+  (`notify: "fehlgeschlagen"`) — ohne sie ist eine Anfrage bei
+  einer Störung des Postausgangs verloren.
 - **Erratbare Raumcodes.** `GET /api/aggregate?room=` ist öffentlich, und zwar
   mit Absicht: Jede Teilnehmerin fragt ihn ab, um das Gruppenprofil zu sehen.
   Wer den Raumcode kennt oder errät, sieht es aber ebenso — und seit die
