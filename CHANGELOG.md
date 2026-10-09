@@ -8,6 +8,34 @@ bezeichnet. Neue Einträge oben anfügen.
 
 ---
 
+## 2026-10-09 — Quick Check: neue Aussagen, zwei Dimensionen umbenannt
+
+Fachliche Überarbeitung des Fragebogens. Das Merkwort ATLAS bleibt, die
+beiden letzten Dimensionen heißen jetzt **Arbeitsfluss** (bisher Steuerung)
+und **Struktur** (bisher Architektur) und tauschen damit Schritt und Achse.
+
+- **20 statt 15 Aussagen**, vier je Dimension, alle Texte neu.
+- **Negativ formulierte Aussagen.** Neun Aussagen sind so gestellt, dass
+  Zustimmung ein schlechtes Ergebnis bedeutet. Gespeichert wird der Rohwert,
+  gespiegelt wird erst bei der Auswertung, in App und Benachrichtigungsmail
+  gleichermaßen.
+- **Speicherreihenfolge gleich Anzeigereihenfolge.** Die Kennungen `q0`…`q19`
+  folgen jetzt der ATLAS-Reihenfolge; die frühere Trennung entfällt.
+- **Gesamtbewertung** hängt am Mittelwert statt an Punktegrenzen, gleichwertig
+  zu vorher und unabhängig von der Anzahl der Aussagen.
+- Landingpage, Datenschutzerklärung und Beispielgrafik entsprechend angepasst.
+
+**Altdaten sind unvergleichbar.** Der Datenbestand auf dem Server ist vor dem
+Ausrollen zu leeren; Entwürfe im Browser werden über einen neuen
+Speicherschlüssel verworfen. Server und Landingpage müssen zusammen ausgerollt
+werden, sonst zeigt die Mail ein anderes Profil als die App.
+
+Offen: Die Ansatzpunkte für „Struktur" stammen noch aus der Dimension
+„Architektur"; die Erklärsätze für Alignment und Struktur sind neu formuliert
+und fachlich noch nicht abgenommen.
+
+---
+
 ## 2026-09-18 — Gruppenmodus zeigt jede Bewertung einzeln
 
 Anlass war Feedback aus einem Workshop: Über eine Dimension spreche man erst,

@@ -20,7 +20,10 @@
   var MODE = CFG.mode === "team" ? "team" : "solo";
   var API = (CFG.apiBase || "").replace(/\/+$/, "");
   var POLL_MS = CFG.pollMs || 3000;
-  var STORAGE_KEY = "atlas-quick-check-draft";
+  /* Versionszusatz: Seit dem Fragentausch im Oktober 2026 tragen die Kennungen
+   * q0 bis q19 eine andere Bedeutung. Ein Entwurf aus der Zeit davor darf
+   * nicht auf die neuen Aussagen gelegt werden, deshalb ein neuer Schlüssel. */
+  var STORAGE_KEY = "atlas-quick-check-draft-v2";
 
   // Im Teammodus liefert immer ein Backend die Seite aus, dann ist ein leerer
   // apiBase gleichbedeutend mit "gleiche Herkunft". Im Einzelmodus bedeutet ein
@@ -60,50 +63,65 @@
   // =====================================================================
 
   /* Reihenfolge der Abfrage und der Achsen auf der Zielscheibe. Sie ergibt das
-   * Merkwort ATLAS: Alignment, Teams, Leadership, Architektur, Steuerung.
+   * Merkwort ATLAS: Alignment, Teams, Leadership, Arbeitsfluss, Struktur.
    *
-   * Die Liste steuert AUSSCHLIESSLICH die Darstellung: welche Dimension auf
-   * welchem Schritt liegt und wo ihre Achse sitzt. Die Kennungen q0 bis q14
-   * entstehen dagegen aus der Reihenfolge von QUESTIONS weiter unten, und die
-   * bleibt unangetastet. Wer hier umsortiert, ändert also die Reihenfolge im
-   * Fragebogen, nicht die Bedeutung der gespeicherten Antworten — Altdaten
-   * bleiben vergleichbar. Wer dagegen QUESTIONS umsortiert, verschiebt die
-   * Kennungen und macht Altdaten unbrauchbar.
+   * Seit dem Fragentausch im Oktober 2026 folgt QUESTIONS derselben Reihenfolge,
+   * je vier Aussagen pro Dimension, Kennungen q0 bis q19. Die beiden Listen
+   * sind damit absichtlich deckungsgleich; ein Umsortieren von QUESTIONS
+   * verschiebt die Kennungen und deutet gespeicherte Antworten um.
    */
-  var DIMENSIONS = ["Alignment", "Teams", "Leadership", "Architektur", "Steuerung"];
+  var DIMENSIONS = ["Alignment", "Teams", "Leadership", "Arbeitsfluss", "Struktur"];
 
   // Erklärung der Dimensionen. Bewusst NICHT im Fragenteil, sondern erst im
   // Ergebnis: eine vorangestellte Definition rahmt die Antwort und verschiebt
   // sie von "trifft diese Aussage zu" zu "wie gut sind wir in der Kategorie".
   var DIM_INTRO = {
-    Leadership: "Wie Entscheidungen getroffen und Teams geführt werden.",
-    Alignment: "Wie klar Initiativen und Ziele im Unternehmen verbunden sind.",
-    Steuerung: "Wie gut Arbeit und Abhängigkeiten über Teams hinweg gesteuert werden.",
+    Alignment: "Wie klar strategische Ziele sind und wie sie Arbeit und Entscheidungen leiten.",
     Teams: "Wie die Teams selbst arbeiten und sich verbessern.",
-    Architektur: "Wie unabhängig Teams businessrelevante Funktionen liefern können."
+    Leadership: "Wie Entscheidungen getroffen und Teams geführt werden.",
+    Arbeitsfluss: "Wie gut Arbeit und Abhängigkeiten über Teams hinweg gesteuert werden.",
+    Struktur: "Wie gut Strukturen Zusammenarbeit, Lernen und Anpassung ermöglichen."
   };
 
+  /* Aussagen je Dimension. "neg: true" kennzeichnet eine negativ formulierte
+   * Aussage: Zustimmung bedeutet dort ein schlechtes Ergebnis. Gespeichert und
+   * übertragen wird immer der angeklickte Rohwert 1 bis 5; umgedreht wird erst
+   * bei der Auswertung, siehe effective(). Der Server mittelt roh je Kennung
+   * und kennt die Richtung nur für die Benachrichtigungsmail. */
   var QUESTIONS = [
-    { dim: "Leadership", text: "Entscheidungen haben den Kunden im Fokus." },
-    { dim: "Leadership", text: "Wir übernehmen Verantwortung für Entscheidungen." },
-    { dim: "Leadership", text: "Führung sorgt bei Mitarbeitenden und Teams für Fokus." },
+    { dim: "Alignment", text: "Den Mitarbeitenden sind die strategischen Ziele des Unternehmens klar." },
+    { dim: "Alignment", text: "Mitarbeitende wissen genau, wie ihre Arbeit auf strategische Ziele einzahlt." },
+    { dim: "Alignment", neg: true, text: "Priorisierungsentscheidungen sind schwierig, weil Produktvisionen und/oder Produktziele unklar sind." },
+    { dim: "Alignment", neg: true, text: "Entscheidungen bei übergreifenden Themen sind langwierig." },
 
-    { dim: "Alignment", text: "Allen ist klar, welche Initiativen in deinem Unternehmen im Fokus stehen." },
-    { dim: "Alignment", text: "Deine Teams wissen genau, wie ihre Arbeit auf Initiativen einzahlt." },
-    { dim: "Alignment", text: "Teams und Abteilungen unterstützen sich bei der Erreichung von Zielen." },
-
-    { dim: "Steuerung", text: "Die anfallende Arbeit bekommen wir in der Regel gut abgearbeitet." },
-    { dim: "Steuerung", text: "Der Arbeitsablauf wird teamübergreifend im Sinne der Wertschöpfung optimiert." },
-    { dim: "Steuerung", text: "Abhängigkeiten sind bekannt und werden frühzeitig adressiert." },
-
-    { dim: "Teams", text: "Die Teams kennen die Kundenerwartungen." },
+    { dim: "Teams", text: "Jedes Team liefert verlässlich in hoher Qualität." },
+    { dim: "Teams", neg: true, text: "Wenn einzelne Personen abwesend sind, stockt die Arbeit im Team." },
+    { dim: "Teams", neg: true, text: "Lieferqualität variiert spürbar je nachdem, welches Teammitglied die Anforderung übernimmt." },
     { dim: "Teams", text: "Die Teams reflektieren regelmäßig über teaminterne Verbesserungsmöglichkeiten." },
-    { dim: "Teams", text: "Die Teams gehen Probleme teamübergreifend an." },
 
-    { dim: "Architektur", text: "Businessrelevante Funktionalitäten werden nach der Übergabe an ein anderes Team ohne Stocken sofort weiterentwickelt." },
-    { dim: "Architektur", text: "Jedes Team kann unabhängig von anderen Teams businessrelevante Funktionen in die Produktion überführen." },
-    { dim: "Architektur", text: "Unsere Teams liefern gemeinsam alle 1–2 Sprints businessrelevante Funktionen in die Produktion." }
-  ].map(function (q, i) { q.id = "q" + i; return q; });
+    { dim: "Leadership", text: "Leadership hält Personen und Teams accountable." },
+    { dim: "Leadership", neg: true, text: "Prioritäten wechseln häufig." },
+    { dim: "Leadership", text: "Leadership sorgt für einen Rahmen, der teamübergreifende Zusammenarbeit ermöglicht." },
+    { dim: "Leadership", neg: true, text: "Wichtige Probleme bleiben zu lange unadressiert, weil sich niemand verantwortlich fühlt." },
+
+    { dim: "Arbeitsfluss", text: "Der Arbeitsablauf wird teamübergreifend im Sinne der Wertschöpfung optimiert." },
+    { dim: "Arbeitsfluss", neg: true, text: "Arbeit stockt aufgrund von Abhängigkeiten." },
+    { dim: "Arbeitsfluss", text: "Teams entscheiden gemeinsam, welche übergreifende Arbeit sie einplanen." },
+    { dim: "Arbeitsfluss", text: "Wir liefern teamübergreifende Funktionalität verlässlich und vorhersagbar." },
+
+    { dim: "Struktur", text: "Unsere Strukturen sorgen für effizienten Informationsaustausch und befördern das Unternehmenslernen." },
+    { dim: "Struktur", neg: true, text: "(Team-)Strukturen und Regelungen behindern die teamübergreifende Zusammenarbeit." },
+    { dim: "Struktur", neg: true, text: "Unsere Strukturen behindern uns, schnell auf Marktveränderungen zu reagieren." },
+    { dim: "Struktur", text: "Unsere Teamstrukturen werden immer wieder so an die Ziele angepasst, dass die Ziele effektiv erreicht werden können." }
+  ].map(function (q, i) { q.id = "q" + i; q.neg = !!q.neg; return q; });
+
+  /* Wirksamer Wert einer Antwort: bei negativ formulierten Aussagen gespiegelt,
+   * 5 wird 1 und 1 wird 5. Gilt genauso für den Mittelwert einer Frage über
+   * mehrere Personen, denn der Mittelwert gespiegelter Werte ist der
+   * gespiegelte Mittelwert. */
+  function effective(q, v) {
+    return q.neg ? 6 - v : v;
+  }
 
   // Beschriftung wie im bisherigen Typeform: nur die drei Anker sind benannt.
   var SCALE = [
@@ -132,33 +150,32 @@
     return ZONES[ZONES.length - 1];
   }
 
-  // Gesamtbewertung. Texte wörtlich aus dem bisherigen Typeform, Grenzen aus
-  // dessen Punktelogik (Gesamtscore 15 bis 75 über 15 Aussagen). Gerechnet wird
-  // über den Mittelwert, damit dieselbe Einordnung auch für Gruppenmittelwerte
-  // gilt; angezeigt werden Punkte nicht, sie sind exakt das Dreifache des
-  // Mittelwerts und damit eine zweite Einheit für dieselbe Größe.
+  // Gesamtbewertung. Texte wörtlich aus dem bisherigen Typeform. Dessen
+  // Punktegrenzen 29 und 45 bei 15 Aussagen entsprechen einem Mittelwert von
+  // unter 2,0 bzw. bis 3,0; so ausgedrückt gilt die Einordnung unabhängig von
+  // der Anzahl der Aussagen und ebenso für Gruppenmittelwerte.
   var OVERALL_BANDS = [
     {
-      maxPoints: 29,
+      to: 2, inclusive: false,
       title: "Ihr scheint in Euren Teams noch viele Möglichkeiten zu haben, an denen Ihr anpacken könnt.",
       text: "Wirf die Flinte nicht ins Korn. Oder um es mit Kent Beck zu sagen: „Perfect is a Verb.“"
     },
     {
-      maxPoints: 45,
+      to: 3, inclusive: true,
       title: "Ihr scheint schon einiges richtig zu machen, bleibt am Ball!",
       text: ""
     },
     {
-      maxPoints: 75,
+      to: 5, inclusive: true,
       title: "Nicht schlecht, Ihr scheint viele Dinge richtig zu machen.",
       text: "Bleibt dran."
     }
   ];
 
   function overallBandFor(overallMean) {
-    var points = overallMean * QUESTIONS.length;
     for (var i = 0; i < OVERALL_BANDS.length; i++) {
-      if (points <= OVERALL_BANDS[i].maxPoints) return OVERALL_BANDS[i];
+      var b = OVERALL_BANDS[i];
+      if (b.inclusive ? overallMean <= b.to : overallMean < b.to) return b;
     }
     return OVERALL_BANDS[OVERALL_BANDS.length - 1];
   }
@@ -175,7 +192,7 @@
       "Workflow-Replenishments",
       "Gemeinsames Erstellen und Pflegen einer Strategie auf Flight Level 3"
     ],
-    Steuerung: [
+    Arbeitsfluss: [
       "Fluss der Arbeit transparent machen",
       "Flussmetriken etablieren",
       "Flow Review einführen"
@@ -185,7 +202,7 @@
       "Produktreviews durchführen",
       "Retrospektiven etablieren"
     ],
-    Architektur: [
+    Struktur: [
       "Continuous Integration aufbauen",
       "Testgetriebene Entwicklung anwenden",
       "Systeme modularisieren"
@@ -316,7 +333,7 @@
     DIMENSIONS.forEach(function (d) { sums[d] = 0; counts[d] = 0; });
     QUESTIONS.forEach(function (q) {
       var v = ans[q.id];
-      if (typeof v === "number") { sums[q.dim] += v; counts[q.dim] += 1; }
+      if (typeof v === "number") { sums[q.dim] += effective(q, v); counts[q.dim] += 1; }
     });
     DIMENSIONS.forEach(function (d) { avg[d] = counts[d] ? sums[d] / counts[d] : 0; });
     return withOverall(avg);
@@ -330,7 +347,7 @@
     DIMENSIONS.forEach(function (d) { sums[d] = 0; counts[d] = 0; });
     QUESTIONS.forEach(function (q) {
       var v = qMeans[q.id];
-      if (typeof v === "number") { sums[q.dim] += v; counts[q.dim] += 1; }
+      if (typeof v === "number") { sums[q.dim] += effective(q, v); counts[q.dim] += 1; }
     });
     DIMENSIONS.forEach(function (d) { avg[d] = counts[d] ? sums[d] / counts[d] : 0; });
     return withOverall(avg);
@@ -806,7 +823,7 @@
     $("result-disclaimer").textContent =
       "Momentaufnahme aus deiner Sicht, keine Messung. Sie zeigt, wo sich ein genauerer Blick lohnt.";
     $("scores-note").textContent =
-      "Je Dimension drei Aussagen. Gezeigt ist der Mittelwert auf der Skala 1 bis 5.";
+      "Je Dimension vier Aussagen. Gezeigt ist der Mittelwert auf der Skala 1 bis 5.";
 
     var notes = "";
     if (submitState === "sent") {
@@ -847,7 +864,7 @@
     renderMeasures("measures", group.avg);
 
     $("result-disclaimer").textContent = "Momentaufnahme aus Sicht der Teilnehmenden, keine Messung.";
-    $("scores-note").textContent = "Je Dimension drei Aussagen, Skala 1 bis 5. Der Gruppenwert ist der " +
+    $("scores-note").textContent = "Je Dimension vier Aussagen, Skala 1 bis 5. Der Gruppenwert ist der " +
       "Mittelwert über alle Rückmeldungen und aktualisiert sich laufend.";
     $("result-notes").innerHTML = '<div class="notice">Dein Beitrag ist eingegangen. Das Profil beruht auf ' +
       (count === 1 ? "einer Rückmeldung" : count + " Rückmeldungen") + " und aktualisiert sich automatisch.</div>";
@@ -1361,9 +1378,9 @@
   // =====================================================================
 
   $("intro-note").textContent = MODE === "team"
-    ? "15 Aussagen in fünf Schritten, Skala 1 bis 5. Dauer etwa 4 Minuten. Deine Antworten werden ohne Namen " +
+    ? "20 Aussagen in fünf Schritten, Skala 1 bis 5. Dauer etwa 5 Minuten. Deine Antworten werden ohne Namen " +
       "gespeichert und mit den Antworten der anderen zu einem gemeinsamen Profil zusammengefasst."
-    : "15 Aussagen in fünf Schritten, Skala 1 bis 5. Dauer etwa 4 Minuten. Am Ende fragen wir nach deinen " +
+    : "20 Aussagen in fünf Schritten, Skala 1 bis 5. Dauer etwa 5 Minuten. Am Ende fragen wir nach deinen " +
       "Kontaktdaten – dein Ergebnis kannst du auch ohne ansehen. Deine Antworten bleiben bis dahin in deinem Browser.";
 
   renderStep();

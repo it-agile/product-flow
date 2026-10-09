@@ -445,7 +445,7 @@ deluser quickcheck
    `https://atlas-quick-check.it-agile.de/quick-check/?room=kunde-4823&present=1`
    Sie zeigt QR-Code, Adresse, Raumcode, Anzahl der Rückmeldungen und die
    Auswertung. Aktualisierung alle drei Sekunden.
-3. Teilnehmende scannen den QR-Code, beantworten 15 Aussagen und sehen danach
+3. Teilnehmende scannen den QR-Code, beantworten 20 Aussagen und sehen danach
    das Gruppenprofil mit ihren eigenen Werten als gestrichelte Linie darüber.
 4. Nach dem Workshop über die Moderationsansicht zurücksetzen. Das fragt nach
    dem `ADMIN_TOKEN` und leert **nur diesen Raum**.
@@ -482,37 +482,56 @@ nur auf neue Einreichungen. Dieser Altbestand lässt sich unverändert über
 | Endpunkt | Zugang | Zweck |
 |---|---|---|
 | `POST /api/submit` | öffentlich | Antworten, optional Kontaktdaten. Verlangt ein Feld `id`. Begrenzt auf 30 Einreichungen je IP in 10 Minuten. Kontaktdaten nimmt der Server nur mit `consent: true` und gültiger E-Mail-Adresse an, sonst 400 (`consent_required`, `invalid_email`). Das Formular prüft beides auch — aber ein Formular ist keine Zugangskontrolle. |
-| `GET /api/aggregate?room=` | öffentlich | Anzahl, Mittelwert je Frage und unter `responses` die einzelnen Antwortsätze (`q0`…`q14`) mit einem bedeutungslosen Streuschlüssel. **Keine** Kontaktdaten, keine Eingangszeit, keine Kennung. Die Moderationsansicht zeichnet daraus die Punktwolke. |
+| `GET /api/aggregate?room=` | öffentlich | Anzahl, Mittelwert je Frage und unter `responses` die einzelnen Antwortsätze (`q0`…`q19`) mit einem bedeutungslosen Streuschlüssel. **Keine** Kontaktdaten, keine Eingangszeit, keine Kennung. Die Moderationsansicht zeichnet daraus die Punktwolke. |
 | `GET /api/qr?room=` | öffentlich | QR-Code als SVG |
 | `GET /api/data` | Token | Rohdaten inklusive Kontaktdaten, optional nach Raum |
 | `POST /api/reset` | Token | Raum leeren, `{"room":"*"}` leert alles |
 
-Der Server kennt den Fragebogen **nicht**. Er aggregiert nur je Frage
-(`q0`, `q1`, …) und weiss nichts von Dimensionen, Zonen oder Texten. Die
-Zuordnung macht die App. Deshalb müssen Änderungen am Fragebogen nur an einer
-Stelle gemacht werden.
+Der Server kennt den Fragebogen **fast nicht**. Er aggregiert nur je Frage
+(`q0`, `q1`, …) und weiss nichts von Zonen oder Texten. Die Zuordnung zu
+Dimensionen macht die App. Einzige Ausnahme ist die Benachrichtigungsmail: Um
+dort ein Profil je Dimension zu zeigen, hält `server.js` eine Kopie der
+Zuordnung (`QUESTION_DIMS`) und der Richtung je Aussage (`QUESTION_NEG`).
+Abschnitt [13] der Testsuite hält die Kopie mit `app.js` zusammen.
 
-### Zwei Reihenfolgen, die nicht dasselbe sind
+### Fragebogen: Reihenfolge und Richtung der Aussagen
 
-| | wo | Reihenfolge |
+Seit dem Fragentausch im Oktober 2026 gilt:
+
+| | wo | Inhalt |
 |---|---|---|
-| **Anzeige** | `DIMENSIONS` in `app/app.js` | Alignment, Teams, Leadership, Architektur, Steuerung |
-| **Speicherung** | `QUESTIONS` in `app/app.js` → `q0`…`q14` | Leadership, Alignment, Steuerung, Teams, Architektur |
+| **Anzeige** | `DIMENSIONS` in `app/app.js` | Alignment, Teams, Leadership, Arbeitsfluss, Struktur |
+| **Speicherung** | `QUESTIONS` in `app/app.js` → `q0`…`q19` | dieselbe Reihenfolge, je vier Aussagen |
 
-`DIMENSIONS` bestimmt nur die Darstellung: auf welchem Schritt eine Dimension
+`DIMENSIONS` bestimmt die Darstellung: auf welchem Schritt eine Dimension
 abgefragt wird und wo ihre Achse auf der Zielscheibe sitzt. Sie ergibt das
-Merkwort **ATLAS**.
+Merkwort **ATLAS**. Die Kennungen `q0` bis `q19` entstehen aus `QUESTIONS` und
+folgen seit dem Umbau bewusst derselben Reihenfolge; die frühere Trennung in
+zwei Reihenfolgen (ein Erbe des Typeforms) ist damit aufgehoben. Wer
+`QUESTIONS` umsortiert, verschiebt die Kennungen und deutet alle bis dahin
+gespeicherten Antworten um. Abschnitt [2] der Testsuite prüft die Zuordnung
+gegen die Quelle.
 
-Die Kennungen `q0` bis `q14` entstehen dagegen aus `QUESTIONS`, je drei
-Aussagen pro Dimension. Diese Reihenfolge ist bei der Umbenennung von LASTA auf
-ATLAS am 15.09.2026 **bewusst unverändert geblieben**: Da der Server nur je
-`q`-Kennung mittelt, würde ein Umsortieren dort sämtliche bereits erhobenen
-Antworten umdeuten, ohne dass es irgendwo auffiele.
+**Negativ formulierte Aussagen.** Neun der zwanzig Aussagen sind so gestellt,
+dass Zustimmung ein schlechtes Ergebnis bedeutet („Prioritäten wechseln
+häufig"). Sie tragen in `QUESTIONS` das Kennzeichen `neg: true`. Gespeichert,
+übertragen und vom Server aggregiert wird immer der **Rohwert** 1 bis 5, so wie
+er angeklickt wurde. Gespiegelt (6 minus Wert) wird an genau einer Stelle, in
+`effective()` bei der Auswertung. Das gilt auch für den Gruppenmittelwert, denn
+der Mittelwert gespiegelter Werte ist der gespiegelte Mittelwert. Die
+Benachrichtigungsmail spiegelt über `QUESTION_NEG` in `server.js` auf dieselbe
+Weise. Wer die Rohdaten über `/api/data` liest, muss die Richtung selbst
+berücksichtigen.
 
-Wer den Fragebogen umbaut, muss deshalb wissen, welche der beiden Listen er
-anfasst. Zwei Prüfungen in Abschnitt [2] der Testsuite halten die Trennung fest,
-und die Testhilfe `aggregate` bildet `q0`…`q14` über `QUESTION_DIMS` ab, nicht
-über `DIMS`.
+**Gesamtbewertung.** Die drei Textstufen hängen am Gesamtmittelwert: unter 2,0,
+bis einschließlich 3,0, darüber. Das entspricht den Punktegrenzen 29 und 45 des
+alten Typeforms bei 15 Aussagen und gilt unabhängig von der Anzahl der Aussagen.
+
+**Altdaten.** Mit dem Fragentausch wurden alle vorher erhobenen Antworten
+unvergleichbar. Der Datenbestand auf dem Server ist deshalb vor dem Ausrollen zu
+leeren (`POST /api/reset` mit `{"room":"*"}`), und im Browser gespeicherte
+Entwürfe werden über einen neuen Speicherschlüssel
+(`atlas-quick-check-draft-v2`) verworfen.
 
 ## Offene Punkte
 
@@ -545,17 +564,18 @@ und die Testhilfe `aggregate` bildet `q0`…`q14` über `QUESTION_DIMS` ab, nich
   die zweite Abhilfe: Raumcodes serverseitig mit einem Zufallsanteil erzeugen,
   statt sie frei wählen zu lassen. Bis dahin gilt die Handreichung unter
   „Workshop durchführen".
-- **Formulierung der Aussagen.** Das Subjekt wechselt zwischen „wir", „eure
-  Teams" und „deine Teams"; die Aussagen 13 und 15 fragen mehrere Bedingungen
-  gleichzeitig ab. Beides stammt wörtlich aus dem Typeform. Eine Änderung
-  berührt die Vergleichbarkeit mit Altdaten und ist eine inhaltliche
-  Entscheidung.
+- **Ansatzpunkte und Erklärsätze nach dem Fragentausch.** Die Ansatzpunkte
+  (`MEASURES`) stammen noch aus dem Typeform und passen bei „Struktur" nicht
+  mehr zu den Aussagen: Continuous Integration, testgetriebene Entwicklung und
+  Modularisierung sind Antworten auf die frühere Dimension „Architektur". Die
+  Erklärsätze (`DIM_INTRO`) für Alignment und Struktur sind beim Umbau neu
+  formuliert und fachlich noch nicht abgenommen.
 - **Zonengrenzen.** „wirksam" ab Mittelwert 4,0, „teilweise wirksam" ab 2,0,
   darunter „Entwicklungsfeld". Ansatzpunkte erscheinen nur für die beiden
   unteren Zonen. Die
-  Textstufen der Gesamtbewertung folgen dagegen weiterhin den Punktegrenzen 29
-  und 45 aus dem Typeform. Beides ist bewusst gesetzt, aber nicht empirisch
-  kalibriert.
+  Textstufen der Gesamtbewertung liegen bei Mittelwert 2,0 und 3,0, das
+  entspricht den Punktegrenzen 29 und 45 aus dem Typeform. Beides ist bewusst
+  gesetzt, aber nicht empirisch kalibriert.
 - **Einwilligung.** Speicherung und Kontaktaufnahme hängen an einem Häkchen,
   weil die Daten nur diesem einen Zweck dienen. Ob das der geforderten
   Granularität entspricht, ist juristisch zu prüfen.

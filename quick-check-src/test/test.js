@@ -43,17 +43,35 @@ function section(t) { console.log("\n" + t); }
 
 /* Anzeigereihenfolge: so wird abgefragt und so stehen die Achsen. Ergibt das
  * Merkwort ATLAS. Entspricht DIMENSIONS in app/app.js. */
-const DIMS = ["Alignment", "Teams", "Leadership", "Architektur", "Steuerung"];
+const DIMS = ["Alignment", "Teams", "Leadership", "Arbeitsfluss", "Struktur"];
 
-/* Speicherreihenfolge: so sind die Aussagen im Fragebogen gruppiert, daraus
- * entstehen die Kennungen q0…q14 (je drei Aussagen). Entspricht QUESTIONS in
- * app/app.js und ist bewusst eine ANDERE Reihenfolge als DIMS. Verschöbe man
- * sie, bekämen bereits erhobene Antworten eine neue Bedeutung. */
-const QUESTION_DIMS = ["Leadership", "Alignment", "Steuerung", "Teams", "Architektur"];
+/* Speicherreihenfolge: seit dem Fragentausch im Oktober 2026 dieselbe wie DIMS,
+ * je vier Aussagen, daraus die Kennungen q0…q19. QUESTION_NEG markiert die
+ * negativ formulierten Aussagen, bei denen Zustimmung ein schlechtes Ergebnis
+ * bedeutet. Beides entspricht QUESTIONS in app/app.js; Abschnitt [2] gleicht
+ * die Kopie hier mit der Quelle ab. */
+const QUESTION_DIMS = DIMS.flatMap(d => [d, d, d, d]);
+const QUESTION_NEG = [
+  false, false, true, true,
+  false, true, true, false,
+  false, true, false, true,
+  false, true, false, false,
+  false, true, true, false
+];
+const N = QUESTION_DIMS.length;
+/* Rohwert, der fuer die Aussage q<i> den wirksamen Wert v ergibt. Die Tests
+ * reden durchweg in wirksamen Werten ("Leadership 5,0"); nur die Radios und die
+ * Antwortobjekte tragen den Rohwert. */
+const rohFuer = (i, v) => QUESTION_NEG[i] ? 6 - v : v;
+const rohAntworten = perDim => {
+  const a = {};
+  for (let i = 0; i < N; i++) a["q" + i] = rohFuer(i, perDim[QUESTION_DIMS[i]]);
+  return a;
+};
 const $ = (doc, id) => doc.getElementById(id);
 const visible = (doc, id) => !$(doc, id).hidden;
-const flat = v => ({ Leadership: v, Alignment: v, Steuerung: v, Teams: v, Architektur: v });
-const MIXED = { Leadership: 5, Alignment: 4, Steuerung: 3, Teams: 2, Architektur: 1 };
+const flat = v => ({ Leadership: v, Alignment: v, Arbeitsfluss: v, Teams: v, Struktur: v });
+const MIXED = { Leadership: 5, Alignment: 4, Arbeitsfluss: 3, Teams: 2, Struktur: 1 };
 
 // ---------------------------------------------------------------- jsdom-Umgebung
 
@@ -69,7 +87,7 @@ function boot(html, opts) {
       window.scrollTo = function () {};
       window.print = function () { window.__printed = true; };
       window.prompt = function () { return opts.promptValue !== undefined ? opts.promptValue : "tok"; };
-      if (opts.seedDraft) window.localStorage.setItem("atlas-quick-check-draft", JSON.stringify(opts.seedDraft));
+      if (opts.seedDraft) window.localStorage.setItem("atlas-quick-check-draft-v2", JSON.stringify(opts.seedDraft));
       window.fetch = function (url, init) {
         calls.push({ url: String(url), init: init || {} });
         if (opts.fetchImpl) return opts.fetchImpl(String(url), init || {});
@@ -86,10 +104,13 @@ function next(doc, win) {
 function submitContact(doc, win) {
   $(doc, "form-contact").dispatchEvent(new win.Event("submit", { bubbles: true, cancelable: true }));
 }
+/* Beantwortet alle Aussagen des Schritts so, dass jede den WIRKSAMEN Wert
+ * value ergibt: negativ formulierte bekommen den gespiegelten Rohwert. */
 function answerCurrentStep(doc, win, value) {
   const groups = [...new Set([...doc.querySelectorAll("#questions input[type=radio]")].map(i => i.name))];
   groups.forEach(name => {
-    const input = doc.querySelector('input[name="' + name + '"][value="' + value + '"]');
+    const raw = rohFuer(Number(name.slice(1)), value);
+    const input = doc.querySelector('input[name="' + name + '"][value="' + raw + '"]');
     input.checked = true;
     input.dispatchEvent(new win.Event("change", { bubbles: true }));
   });
@@ -171,7 +192,7 @@ section("[2] Einzelmodus: fünf Schritte");
   check("Zähler im Einzelmodus verborgen", $(doc, "counter").hidden);
 
   $(doc, "btn-start").click();
-  check("nur 3 Aussagen gleichzeitig", doc.querySelectorAll("fieldset.q").length === 3);
+  check("nur 4 Aussagen gleichzeitig", doc.querySelectorAll("fieldset.q").length === 4);
   check("Fortschritt Dimension 1 von 5", $(doc, "progress").textContent === "Dimension 1 von 5");
   check("Schrittanzeige mit 5 Segmenten", doc.querySelectorAll("#steps li").length === 5);
   check("Erklärsatz nicht im Fragenteil",
@@ -188,18 +209,27 @@ section("[2] Einzelmodus: fünf Schritte");
   }
   check("ATLAS-Reihenfolge", JSON.stringify(seen) === JSON.stringify(DIMS), seen);
 
-  /* Der Kern der Umstellung vom 15.09.2026: Die Dimensionen werden in der
-   * Reihenfolge ATLAS abgefragt, die Kennungen q0…q14 folgen aber weiterhin
-   * der Reihenfolge der Aussagen. Nur deshalb bleiben bereits erhobene
-   * Antworten vergleichbar. Verschiebt jemand QUESTIONS in app.js, schlaegt
-   * diese Pruefung fehl -- und das ist ihr ganzer Zweck. */
+  /* Seit dem Fragentausch im Oktober 2026 folgen die Kennungen q0…q19 der
+   * ATLAS-Reihenfolge, vier je Dimension. Verschiebt jemand QUESTIONS in
+   * app.js, schlaegt diese Pruefung fehl -- und das ist ihr ganzer Zweck. */
   const erwartet = {};
-  QUESTION_DIMS.forEach((d, i) => { erwartet[d] = ["q" + (i * 3), "q" + (i * 3 + 1), "q" + (i * 3 + 2)]; });
-  check("Kennungen q0…q14 folgen den Aussagen, nicht der Anzeige",
-    JSON.stringify(gesehene) === JSON.stringify(
-      DIMS.reduce((o, d) => { o[d] = erwartet[d]; return o; }, {})), gesehene);
-  check("Anzeige- und Speicherreihenfolge sind wirklich verschieden",
-    JSON.stringify(DIMS) !== JSON.stringify(QUESTION_DIMS));
+  QUESTION_DIMS.forEach((d, i) => { (erwartet[d] = erwartet[d] || []).push("q" + i); });
+  check("Kennungen q0…q19: vier je Dimension in ATLAS-Reihenfolge",
+    JSON.stringify(gesehene) === JSON.stringify(erwartet), gesehene);
+
+  /* Die Kopie von Dimension und Richtung je Aussage hier im Test muss mit der
+   * Quelle uebereinstimmen, sonst pruefen die Tests gegen einen anderen
+   * Fragebogen als den ausgelieferten. */
+  const appSrc = fs.readFileSync(path.join(SRC, "app", "app.js"), "utf8");
+  const qSrc = appSrc.slice(appSrc.indexOf("var QUESTIONS = ["), appSrc.indexOf("].map(function (q, i)"));
+  const eintraege = [...qSrc.matchAll(/\{ dim: "([^"]+)",( neg: true,)? text: "/g)];
+  check("Fragebogen in app.js hat 20 Aussagen", eintraege.length === N, eintraege.length);
+  check("Dimension je Aussage wie in app.js",
+    JSON.stringify(eintraege.map(m => m[1])) === JSON.stringify(QUESTION_DIMS), eintraege.map(m => m[1]));
+  check("Richtung je Aussage wie in app.js",
+    JSON.stringify(eintraege.map(m => !!m[2])) === JSON.stringify(QUESTION_NEG), eintraege.map(m => !!m[2]));
+  check("neun Aussagen sind negativ formuliert", QUESTION_NEG.filter(Boolean).length === 9);
+  check("Grammatik: auf strategische Ziele", appSrc.includes("auf strategische Ziele einzahlt"));
   check("Kontakt-Screen erreicht", visible(doc, "screen-contact"));
 }
 {
@@ -207,17 +237,67 @@ section("[2] Einzelmodus: fünf Schritte");
   $(doc, "btn-start").click();
   next(doc, win);
   check("Weiter ohne Antworten blockiert", $(doc, "dim-title").textContent === DIMS[0]);
-  check("Fehlerhinweis nennt 3 offene", $(doc, "questions-error").textContent.includes("3"));
+  check("Fehlerhinweis nennt 4 offene", $(doc, "questions-error").textContent.includes("4"));
   answerCurrentStep(doc, win, 5);
   next(doc, win);
   answerCurrentStep(doc, win, 2);
   $(doc, "btn-back").click();
+  // Spiegeln ist eine Involution: der Rohwert ergibt zurueckgespiegelt den wirksamen Wert.
+  const rohWert = i => rohFuer(Number(i.name.slice(1)), Number(i.value));
   check("Zurück erhält Antworten",
-    [...doc.querySelectorAll("#questions input:checked")].every(i => i.value === "5") &&
-    doc.querySelectorAll("#questions input:checked").length === 3);
+    [...doc.querySelectorAll("#questions input:checked")].every(i => rohWert(i) === 5) &&
+    doc.querySelectorAll("#questions input:checked").length === 4);
   next(doc, win);
   check("Vorwärts erhält Antworten",
-    [...doc.querySelectorAll("#questions input:checked")].every(i => i.value === "2"));
+    [...doc.querySelectorAll("#questions input:checked")].every(i => rohWert(i) === 2));
+}
+
+// ================================================================
+section("[2a] Negativ formulierte Aussagen werden gespiegelt");
+{
+  /* Rohwert 5 auf allen Aussagen: Zustimmung zu "Prioritäten wechseln häufig"
+   * ist ein schlechtes Ergebnis. Je Dimension zwei negative Aussagen, nur
+   * Arbeitsfluss hat eine. */
+  const { doc, win } = boot(soloHtml);
+  $(doc, "btn-start").click();
+  for (let i = 0; i < 5; i++) {
+    [...doc.querySelectorAll("#questions input[value='5']")].forEach(input => {
+      input.checked = true;
+      input.dispatchEvent(new win.Event("change", { bubbles: true }));
+    });
+    next(doc, win);
+  }
+  $(doc, "btn-skip").click();
+  const nums = [...doc.querySelectorAll("#scores-body td.num")].map(t => t.textContent.replace(/\s+/g, " ").trim());
+  check("durchgehend Rohwert 5 ergibt 3,0 bzw. 4,0 bei Arbeitsfluss",
+    JSON.stringify(nums) === JSON.stringify(DIMS.map(d => (d === "Arbeitsfluss" ? "4,0" : "3,0") + " von 5")), nums);
+  check("Gesamtmittel 3,2", $(doc, "result-lead").textContent.includes("3,2 von 5"));
+
+  // Spiegelbild: Rohwert 1 ueberall ergibt 3,0 bzw. 2,0.
+  const { doc: d1, win: w1 } = boot(soloHtml);
+  $(d1, "btn-start").click();
+  for (let i = 0; i < 5; i++) {
+    [...d1.querySelectorAll("#questions input[value='1']")].forEach(input => {
+      input.checked = true;
+      input.dispatchEvent(new w1.Event("change", { bubbles: true }));
+    });
+    next(d1, w1);
+  }
+  $(d1, "btn-skip").click();
+  const nums1 = [...d1.querySelectorAll("#scores-body td.num")].map(t => t.textContent.replace(/\s+/g, " ").trim());
+  check("durchgehend Rohwert 1 ergibt 3,0 bzw. 2,0 bei Arbeitsfluss",
+    JSON.stringify(nums1) === JSON.stringify(DIMS.map(d => (d === "Arbeitsfluss" ? "2,0" : "3,0") + " von 5")), nums1);
+
+  // Wirksam 5 ueberall: die Hilfe spiegelt die Rohwerte, das Ergebnis ist 5,0.
+  const voll = runSolo(flat(5));
+  check("wirksam 5,0 in jeder Dimension",
+    [...voll.doc.querySelectorAll("#scores-body td.num")].every(t => t.textContent.includes("5,0")));
+  // Die Skala selbst bleibt fuer alle Aussagen gleich beschriftet.
+  const { doc: d2 } = boot(soloHtml);
+  $(d2, "btn-start").click();
+  check("Skala bei negativen Aussagen unveraendert beschriftet",
+    [...d2.querySelectorAll("fieldset.q")].every(f =>
+      f.textContent.includes("Stimme gar nicht zu") && f.textContent.includes("Stimme voll und ganz zu")));
 }
 
 // ================================================================
@@ -231,7 +311,7 @@ section("[3] Einzelmodus: Ergebnis, Mittelwert als Leitgröße");
     $(doc, "result-lead").querySelector(".pill").textContent.trim() === "teilweise wirksam",
     $(doc, "result-lead").querySelector(".pill").textContent.trim());
   check("stärkste Dimension", lead.includes("Am stärksten ist Leadership"));
-  check("schwächste Dimension", lead.includes("Hebel siehst du bei Architektur"));
+  check("schwächste Dimension", lead.includes("Hebel siehst du bei Struktur"));
 
   const nums = [...doc.querySelectorAll("#scores-body td.num")].map(t => t.textContent.replace(/\s+/g, " ").trim());
   // Die Tabelle folgt der Anzeigereihenfolge, nicht der Hoehe der Werte.
@@ -281,11 +361,11 @@ section("[4] Zonen, Zielscheibe, Balken");
     Math.abs(ptOf(DIMS[0])[0] - 260) < 0.5 && ptOf(DIMS[0])[1] < 220, ptOf(DIMS[0]));
   check("Leadership 5,0 am Aussenring seiner Achse",
     Math.abs(radiusOf("Leadership") - 125) < 0.6, ptOf("Leadership"));
-  check("Architektur 1,0 bei einem Fünftel",
-    Math.abs(radiusOf("Architektur") - 25) < 0.6);
+  check("Struktur 1,0 bei einem Fünftel",
+    Math.abs(radiusOf("Struktur") - 25) < 0.6);
   check("aria-label mit Werten und Einordnung",
     svg.getAttribute("aria-label").includes("Leadership 5,0 von 5, wirksam") &&
-    svg.getAttribute("aria-label").includes("Architektur 1,0 von 5, Entwicklungsfeld"),
+    svg.getAttribute("aria-label").includes("Struktur 1,0 von 5, Entwicklungsfeld"),
     svg.getAttribute("aria-label"));
 
   const legend = [...doc.querySelectorAll("#zone-legend li")].map(li => li.textContent.replace(/\s+/g, " ").trim());
@@ -304,19 +384,19 @@ section("[4] Zonen, Zielscheibe, Balken");
     [...bars[0].querySelectorAll(".bar-zone")].map(z => z.style.width).join("|") === "40%|40%|20%");
   const barOf = d => bars[DIMS.indexOf(d)];
   check("Marke bei 5,0 rechts", barOf("Leadership").querySelector(".bar-mark").style.left === "100%");
-  check("Marke bei 3,0 bei 60%", barOf("Steuerung").querySelector(".bar-mark").style.left === "60%");
+  check("Marke bei 3,0 bei 60%", barOf("Arbeitsfluss").querySelector(".bar-mark").style.left === "60%");
 }
 
 // ================================================================
 section("[5] Gleichstände und Gesamtbewertung");
 {
-  const a = runSolo({ Leadership: 5, Alignment: 5, Steuerung: 3, Teams: 1, Architektur: 1 });
+  const a = runSolo({ Leadership: 5, Alignment: 5, Arbeitsfluss: 3, Teams: 1, Struktur: 1 });
   const lead = $(a.doc, "result-lead").textContent;
-  check("beide schwächsten genannt", lead.includes("Teams und Architektur"));
+  check("beide schwächsten genannt", lead.includes("Teams und Struktur"));
   check("beide stärksten genannt", lead.includes("Alignment und Leadership"));
   check("Plural", lead.includes("Am stärksten sind"));
-  const b = runSolo({ Leadership: 5, Alignment: 4, Steuerung: 2, Teams: 2, Architektur: 2 });
-  check("drei mit Komma und und", $(b.doc, "result-lead").textContent.includes("Teams, Architektur und Steuerung"));
+  const b = runSolo({ Leadership: 5, Alignment: 4, Arbeitsfluss: 2, Teams: 2, Struktur: 2 });
+  check("drei mit Komma und und", $(b.doc, "result-lead").textContent.includes("Teams, Arbeitsfluss und Struktur"));
   const c = runSolo(flat(3));
   check("kein Hebel bei Gleichstand", $(c.doc, "result-lead").textContent.includes("Alle Dimensionen liegen gleich hoch"));
 
@@ -335,13 +415,13 @@ section("[5] Gleichstände und Gesamtbewertung");
 // ================================================================
 section("[6] Ansatzpunkte nur dort, wo etwas zu holen ist");
 {
-  // MIXED: Leadership 5,0 und Alignment 4,0 sind wirksam, Steuerung 3,0 und
-  // Teams 2,0 teilweise wirksam, Architektur 1,0 ist Entwicklungsfeld.
+  // MIXED: Leadership 5,0 und Alignment 4,0 sind wirksam, Arbeitsfluss 3,0 und
+  // Teams 2,0 teilweise wirksam, Struktur 1,0 ist Entwicklungsfeld.
   const { doc } = runSolo(MIXED);
   const blocks = [...doc.querySelectorAll("#measures .measure")];
   check("nur 3 Blöcke: wirksame Dimensionen ohne Tipps", blocks.length === 3, blocks.length);
   const namen = blocks.map(b => b.querySelector("h3").textContent.trim().split(/\s+/)[0]);
-  check("schwächste zuerst", JSON.stringify(namen) === JSON.stringify(["Architektur", "Teams", "Steuerung"]), namen);
+  check("schwächste zuerst", JSON.stringify(namen) === JSON.stringify(["Struktur", "Teams", "Arbeitsfluss"]), namen);
 
   const txt = $(doc, "measures").textContent;
   check("keine Tipps für Leadership (wirksam)", !txt.includes("Delegationpoker"));
@@ -352,7 +432,7 @@ section("[6] Ansatzpunkte nur dort, wo etwas zu holen ist");
   check("Einleitung erklärt die Auswahl", txt.includes("noch nicht wirksam"));
   check("je Block drei Ansatzpunkte", blocks.every(b => b.querySelectorAll("li").length === 3));
   check("Erklärsatz der Dimension im Block",
-    blocks[0].querySelector(".meta").textContent.includes("Wie unabhängig Teams businessrelevante"));
+    blocks[0].querySelector(".meta").textContent.includes("Wie gut Strukturen Zusammenarbeit"));
   check("Einordnungs-Pille je Block", blocks.every(b => !!b.querySelector(".pill")));
 
   // Durchgehend niedrig: alle fünf Dimensionen bekommen Tipps
@@ -383,12 +463,12 @@ section("[6] Ansatzpunkte nur dort, wo etwas zu holen ist");
     $(high.doc, "measures").textContent.trim());
   check("Überschrift bleibt stehen", $(high.doc, "measures").textContent.includes("Ansatzpunkte"));
 
-  // Mischung an der Grenze: 3,9 gibt es nicht bei drei Aussagen, aber 3,67
-  const knapp = runSolo({ Leadership: 4, Alignment: 4, Steuerung: 4, Teams: 4, Architektur: 3 });
+  // Mischung an der Grenze: 3,9 gibt es nicht bei vier Aussagen, aber 3,75
+  const knapp = runSolo({ Leadership: 4, Alignment: 4, Arbeitsfluss: 4, Teams: 4, Struktur: 3 });
   const knappBlocks = [...knapp.doc.querySelectorAll("#measures .measure")];
   check("nur die einzige nicht wirksame Dimension erhält Tipps",
     knappBlocks.length === 1 &&
-    knappBlocks[0].querySelector("h3").textContent.trim().startsWith("Architektur"),
+    knappBlocks[0].querySelector("h3").textContent.trim().startsWith("Struktur"),
     knappBlocks.map(b => b.querySelector("h3").textContent.trim()));
 }
 
@@ -434,7 +514,13 @@ async function main() {
     if (calls.length === 1) {
       check("Ziel /api/submit", calls[0].url === "https://qc.example.org/api/submit");
       const body = JSON.parse(calls[0].init.body);
-      check("15 Antworten", Object.keys(body.answers).length === 15);
+      check("20 Antworten", Object.keys(body.answers).length === N);
+      /* Uebertragen wird der Rohwert, nicht der gespiegelte: q0 ist positiv
+       * (Alignment 4 -> 4), q2 negativ (Alignment 4 -> 2). */
+      check("Rohwerte im Payload, Spiegelung erst bei der Auswertung",
+        body.answers.q0 === 4 && body.answers.q2 === 2, [body.answers.q0, body.answers.q2]);
+      check("Payload entspricht den wirksamen Werten von MIXED",
+        JSON.stringify(body.answers) === JSON.stringify(rohAntworten(MIXED)));
       check("Kontaktdaten mit Einwilligung",
         body.contact.email === "ralf@example.org" && body.contact.consent === true);
       check("Telefon, Thema und Nachricht übertragen",
@@ -501,11 +587,12 @@ async function main() {
     const one = doc.querySelector("#questions input[value='2']");
     one.checked = true;
     one.dispatchEvent(new win.Event("change", { bubbles: true }));
-    const stored = JSON.parse(win.localStorage.getItem("atlas-quick-check-draft"));
-    check("7 Antworten gespeichert", Object.keys(stored.answers).length === 7);
+    const stored = JSON.parse(win.localStorage.getItem("atlas-quick-check-draft-v2"));
+    check("9 Antworten gespeichert", Object.keys(stored.answers).length === 9);
+    check("alter Entwurfsschlüssel wird nicht mehr benutzt", win.localStorage.getItem("atlas-quick-check-draft") === null);
     const { doc: d2 } = boot(soloHtml, { seedDraft: stored });
     check("Fortsetzen sichtbar", !$(d2, "btn-resume").hidden);
-    check("nennt Anzahl", $(d2, "btn-resume").textContent.includes("7 von 15"));
+    check("nennt Anzahl", $(d2, "btn-resume").textContent.includes("9 von 20"));
     $(d2, "btn-resume").click();
     check("springt zur dritten Dimension", $(d2, "dim-title").textContent === DIMS[2], DIMS[2]);
     check("erledigte Schritte markiert",
@@ -528,18 +615,13 @@ async function main() {
   }
 
   section("[9] Teammodus: Gruppenmittelwert und eigene Antworten");
-  /* Baut eine Antwort von /api/aggregate nach. Die Kennungen q0…q14 folgen der
-   * Reihenfolge der AUSSAGEN (QUESTION_DIMS), nicht der Anzeigereihenfolge der
-   * Dimensionen (DIMS). Wer hier DIMS einsetzt, prüft die App gegen eine
-   * Umdeutung der gespeicherten Daten und merkt es nicht. */
-  const aggregate = (count, perDim) => {
-    const questions = {};
-    for (let i = 0; i < 15; i++) questions["q" + i] = perDim[QUESTION_DIMS[Math.floor(i / 3)]];
-    return { room: "default", count, questions };
-  };
+  /* Baut eine Antwort von /api/aggregate nach: Mittelwert je Kennung q0…q19
+   * als ROHWERT, so wie der Server ihn ohne Kenntnis der Richtung liefert. Die
+   * App muss negativ formulierte Aussagen auch im Gruppenmittel spiegeln. */
+  const aggregate = (count, perDim) => ({ room: "default", count, questions: rohAntworten(perDim) });
   // Gruppenwerte je Dimension. Die Erwartungen unten werden daraus abgeleitet,
   // damit sie eine Umstellung der Anzeigereihenfolge ueberleben.
-  const GRUPPE = { Leadership: 4, Alignment: 3, Steuerung: 2, Teams: 5, Architektur: 1 };
+  const GRUPPE = { Leadership: 4, Alignment: 3, Arbeitsfluss: 2, Teams: 5, Struktur: 1 };
   const etikett = v => v >= 4 ? "wirksam" : (v >= 2 ? "teilweise wirksam" : "Entwicklungsfeld");
   {
     const teamFetch = (url) => {
@@ -600,7 +682,7 @@ async function main() {
     check("Legende nennt Gruppe und eigene Antworten",
       legend.includes("Gruppe") && legend.includes("deine Antworten"), legend);
     // Gruppe: Leadership 4,0 und Teams 5,0 sind wirksam, Alignment 3,0 und
-    // Steuerung 2,0 teilweise wirksam, Architektur 1,0 Entwicklungsfeld.
+    // Arbeitsfluss 2,0 teilweise wirksam, Struktur 1,0 Entwicklungsfeld.
     const mTxt = $(doc, "measures").textContent;
     check("Ansatzpunkte folgen der Gruppe", mTxt.includes("Mittelwert 1,0 von 5"));
     check("nur 3 Blöcke im Teammodus",
@@ -709,16 +791,12 @@ async function main() {
 
   section("[10a] Moderationsansicht: Punktwolke statt gemitteltem Profil");
   /* Baut eine Antwort von /api/aggregate MIT Einzeldaten. Jedes Profil ist ein
-   * Objekt je Dimension; daraus entstehen die 15 Antworten in der
-   * SPEICHERreihenfolge (QUESTION_DIMS), so wie sie wirklich abgelegt sind. */
+   * Objekt je Dimension (wirksame Werte); daraus entstehen die 20 Rohantworten
+   * q0…q19, so wie sie wirklich abgelegt sind. */
   const aggregateMitProfilen = (profile) => {
-    const responses = profile.map((p, i) => {
-      const answers = {};
-      for (let q = 0; q < 15; q++) answers["q" + q] = p[QUESTION_DIMS[Math.floor(q / 3)]];
-      return { key: "schluessel-" + i, answers: answers };
-    });
+    const responses = profile.map((p, i) => ({ key: "schluessel-" + i, answers: rohAntworten(p) }));
     const questions = {};
-    for (let q = 0; q < 15; q++) {
+    for (let q = 0; q < N; q++) {
       questions["q" + q] = responses.reduce((s, x) => s + x.answers["q" + q], 0) / responses.length;
     }
     return { room: "kunde", count: responses.length, questions: questions, responses: responses };
@@ -727,9 +805,9 @@ async function main() {
    * einig bei 5. Genau diesen Unterschied soll die Ansicht zeigen und der
    * Mittelwert allein verdeckt ihn. */
   const PROFILE = [
-    { Leadership: 1, Alignment: 5, Steuerung: 3, Teams: 2, Architektur: 4 },
-    { Leadership: 3, Alignment: 5, Steuerung: 3, Teams: 2, Architektur: 4 },
-    { Leadership: 5, Alignment: 5, Steuerung: 3, Teams: 2, Architektur: 4 }
+    { Leadership: 1, Alignment: 5, Arbeitsfluss: 3, Teams: 2, Struktur: 4 },
+    { Leadership: 3, Alignment: 5, Arbeitsfluss: 3, Teams: 2, Struktur: 4 },
+    { Leadership: 5, Alignment: 5, Arbeitsfluss: 3, Teams: 2, Struktur: 4 }
   ];
   const bootPresent = (payload) => boot(teamHtml, {
     url: "https://atlas-quick-check.it-agile.de/quick-check/?room=kunde&present=1",
@@ -838,7 +916,7 @@ async function main() {
   if (ready) {
     const answersFor = v => {
       const a = {};
-      for (let i = 0; i < 15; i++) a["q" + i] = v;
+      for (let i = 0; i < N; i++) a["q" + i] = v;
       return a;
     };
     const post = (p, body, headers) => fetch(base + p, {
@@ -877,8 +955,8 @@ async function main() {
     r = await fetch(base + "/api/aggregate?room=kunde");
     const agg = await r.json();
     check("Aggregat zählt 2 Rückmeldungen", agg.count === 2, agg.count);
-    check("Aggregat mittelt je Frage korrekt", agg.questions.q0 === 3 && agg.questions.q14 === 3, agg.questions.q0);
-    check("Aggregat enthält alle 15 Fragen", Object.keys(agg.questions).length === 15);
+    check("Aggregat mittelt je Frage korrekt", agg.questions.q0 === 3 && agg.questions.q19 === 3, agg.questions.q0);
+    check("Aggregat enthält alle 20 Fragen", Object.keys(agg.questions).length === N);
     check("Aggregat liefert KEINE Rohdaten", agg.submissions === undefined && agg.contact === undefined);
     check("Aggregat nicht zwischengespeichert", r.headers.get("cache-control") === "no-store");
 
@@ -1166,8 +1244,8 @@ async function main() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-      const alle = {};
-      for (let i = 0; i < 15; i++) alle["q" + i] = 4;
+      // Wirksam 4 ueberall, als Rohwerte: negative Aussagen tragen 2.
+      const alle = rohAntworten(flat(4));
       const daten3 = () => fetch(b3 + "/api/data", { headers: { "x-admin-token": TOKEN } })
         .then(r => r.json());
 
@@ -1211,25 +1289,26 @@ async function main() {
       check("Versandstand als probelauf vermerkt", n1 && n1.notify === "probelauf",
         n1 && n1.notify);
 
-      /* Die Zuordnung q0…q14 zu den Dimensionen steht doppelt: als QUESTIONS in
-       * app/app.js und als QUESTION_DIMS in server/server.js. Laufen die beiden
-       * auseinander, deutet die Mail die Antworten still falsch -- niemandem
-       * faellt das auf, weil die Zahlen plausibel bleiben. */
+      /* Die Zuordnung q0…q19 zu den Dimensionen und die Richtung je Aussage
+       * stehen doppelt: als QUESTIONS in app/app.js und als QUESTION_DIMS und
+       * QUESTION_NEG in server/server.js. Laufen sie auseinander, deutet die
+       * Mail die Antworten still falsch -- niemandem faellt das auf, weil die
+       * Zahlen plausibel bleiben. */
       const serverSrc = fs.readFileSync(path.join(SERVER_DIR, "server.js"), "utf8");
-      const treffer = serverSrc.match(/const QUESTION_DIMS = \[([^\]]*)\]/);
-      const serverDims = treffer
-        ? treffer[1].split(",").map(x => x.trim().replace(/"/g, "")).filter(Boolean) : [];
+      const liste = name => {
+        const treffer = serverSrc.match(new RegExp("const " + name + " = \\[([^\\]]*)\\]"));
+        return treffer ? treffer[1].split(",").map(x => x.trim().replace(/"/g, "")).filter(Boolean) : [];
+      };
       check("Zuordnung im Server deckt sich mit dem Fragebogen",
-        JSON.stringify(serverDims) === JSON.stringify(QUESTION_DIMS), serverDims);
+        JSON.stringify(liste("QUESTION_DIMS")) === JSON.stringify(QUESTION_DIMS), liste("QUESTION_DIMS"));
+      check("Richtung im Server deckt sich mit dem Fragebogen",
+        JSON.stringify(liste("QUESTION_NEG").map(x => x === "true")) === JSON.stringify(QUESTION_NEG),
+        liste("QUESTION_NEG"));
 
       /* Je Dimension ein anderer Wert: erst damit zeigt sich, ob die Mail die
        * richtige Kennung der richtigen Dimension zuordnet. Gleiche Werte
        * ueberall wuerden jede Verwechslung verbergen. */
-      const verschieden = {};
-      QUESTION_DIMS.forEach((dim, g) => {
-        const wert = 5 - g;
-        for (let k = 0; k < 3; k++) verschieden["q" + (g * 3 + k)] = wert;
-      });
+      const verschieden = rohAntworten({ Alignment: 5, Teams: 4, Leadership: 3, Arbeitsfluss: 2, Struktur: 1 });
       const vorProfil = out3.length;
       await post3({
         id: "n4", room: "public", answers: verschieden,
@@ -1237,14 +1316,31 @@ async function main() {
       });
       await new Promise(r2 => setTimeout(r2, 300));
       const mail4 = out3.slice(vorProfil);
-      const erwartet = { Leadership: "5,0", Alignment: "4,0", Steuerung: "3,0", Teams: "2,0", Architektur: "1,0" };
+      const erwartet = { Alignment: "5,0", Teams: "4,0", Leadership: "3,0", Arbeitsfluss: "2,0", Struktur: "1,0" };
       check("Mail ordnet jede Dimension ihrem Wert zu",
         DIMS.every(d => mail4.includes(d + ":" + " ".repeat(Math.max(1, 14 - (d + ":").length)) + erwartet[d])),
         mail4.slice(0, 700));
-      /* Angezeigt wird in der ATLAS-Reihenfolge, nicht in der Speicherfolge. */
+      /* Angezeigt wird in der ATLAS-Reihenfolge. */
       const stellen = DIMS.map(d => mail4.indexOf("\n" + d + ":"));
       check("Profil steht in der ATLAS-Reihenfolge",
         stellen.every((v, i) => v > 0 && (i === 0 || v > stellen[i - 1])), stellen);
+
+      /* Rohwert 5 ueberall: die Mail muss die negativ formulierten Aussagen
+       * genauso spiegeln wie die App, sonst zeigt sie ein anderes Profil als
+       * die anfragende Person gesehen hat. */
+      const rohFuenf = {};
+      for (let i = 0; i < N; i++) rohFuenf["q" + i] = 5;
+      const vorSpiegel = out3.length;
+      await post3({
+        id: "n5", room: "public", answers: rohFuenf,
+        contact: { email: "spiegel@example.org", consent: true }
+      });
+      await new Promise(r2 => setTimeout(r2, 300));
+      const mail5 = out3.slice(vorSpiegel);
+      const zeile = (d, w) => d + ":" + " ".repeat(Math.max(1, 14 - (d + ":").length)) + w;
+      check("Mail spiegelt negativ formulierte Aussagen",
+        mail5.includes(zeile("Alignment", "3,0")) && mail5.includes(zeile("Arbeitsfluss", "4,0")) &&
+        mail5.includes(zeile("Struktur", "3,0")), mail5.slice(0, 700));
 
       // Teammodus: eine Antwort ohne Kontaktdaten ist keine Anfrage.
       const vorher = out3.length;

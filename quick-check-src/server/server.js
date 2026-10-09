@@ -231,18 +231,30 @@ function mailer() {
   return transport;
 }
 
-/* Zuordnung der Antworten zu den Dimensionen. Je drei Aussagen, in der
- * Reihenfolge von QUESTIONS in quick-check-src/app/app.js -- daraus entstehen
- * die Kennungen q0…q14. Der Server braucht sie allein, um die Mail lesbar zu
- * machen; gespeichert wird weiterhin unverändert. Die Liste ist eine
- * Verdopplung aus app.js, eine Prüfung in Abschnitt [13] der Testsuite hält
- * beide zusammen. Wer QUESTIONS umsortiert, deutet damit alle Altdaten um. */
-const QUESTION_DIMS = ["Leadership", "Alignment", "Steuerung", "Teams", "Architektur"];
-const PRO_DIMENSION = 3;
+/* Zuordnung der Antworten zu den Dimensionen und ihre Richtung. Ein Eintrag je
+ * Kennung q0…q19, in der Reihenfolge von QUESTIONS in quick-check-src/app/app.js.
+ * QUESTION_NEG markiert negativ formulierte Aussagen: dort wird der Rohwert
+ * gespiegelt (6 minus Wert), genau wie in der App. Der Server braucht beides
+ * allein, um die Mail lesbar zu machen; gespeichert und über /api/aggregate
+ * herausgegeben wird weiterhin der Rohwert. Beide Listen sind eine Verdopplung
+ * aus app.js, eine Prüfung in Abschnitt [13] der Testsuite hält sie zusammen. */
+const QUESTION_DIMS = [
+  "Alignment", "Alignment", "Alignment", "Alignment",
+  "Teams", "Teams", "Teams", "Teams",
+  "Leadership", "Leadership", "Leadership", "Leadership",
+  "Arbeitsfluss", "Arbeitsfluss", "Arbeitsfluss", "Arbeitsfluss",
+  "Struktur", "Struktur", "Struktur", "Struktur"
+];
+const QUESTION_NEG = [
+  false, false, true, true,
+  false, true, true, false,
+  false, true, false, true,
+  false, true, false, false,
+  false, true, true, false
+];
 
-/* Anzeigereihenfolge, sie ergibt das Merkwort ATLAS -- absichtlich eine andere
- * als die Speicherreihenfolge darüber. */
-const DIM_ORDER = ["Alignment", "Teams", "Leadership", "Architektur", "Steuerung"];
+/* Anzeigereihenfolge, sie ergibt das Merkwort ATLAS. */
+const DIM_ORDER = ["Alignment", "Teams", "Leadership", "Arbeitsfluss", "Struktur"];
 
 /* Mittelwert je Dimension, eine Nachkommastelle mit Komma, so wie die Zahl auch
  * in der Zielscheibe steht, die die anfragende Person gesehen hat. Eine
@@ -250,13 +262,12 @@ const DIM_ORDER = ["Alignment", "Teams", "Leadership", "Architektur", "Steuerung
  * Gedankenstrich. */
 function dimAverages(answers) {
   const summe = {}, anzahl = {};
-  QUESTION_DIMS.forEach((dim, gruppe) => {
-    for (let k = 0; k < PRO_DIMENSION; k++) {
-      const wert = answers ? answers["q" + (gruppe * PRO_DIMENSION + k)] : undefined;
-      if (typeof wert !== "number") continue;
-      summe[dim] = (summe[dim] || 0) + wert;
-      anzahl[dim] = (anzahl[dim] || 0) + 1;
-    }
+  QUESTION_DIMS.forEach((dim, i) => {
+    const roh = answers ? answers["q" + i] : undefined;
+    if (typeof roh !== "number") return;
+    const wert = QUESTION_NEG[i] ? 6 - roh : roh;
+    summe[dim] = (summe[dim] || 0) + wert;
+    anzahl[dim] = (anzahl[dim] || 0) + 1;
   });
   return DIM_ORDER.map((dim) => ({
     dim: dim,
@@ -428,7 +439,7 @@ function streuschluessel(id) {
  * Moderationsansicht zeichnet daraus eine Punktwolke statt eines gemittelten
  * Profils — im Workshop ist die Streuung die eigentliche Information.
  *
- * Herausgegeben werden nur die Zahlen q0…q14. Kontaktdaten, Eingangszeit und
+ * Herausgegeben werden nur die Zahlen q0…q19. Kontaktdaten, Eingangszeit und
  * Kennung bleiben drinnen. Der Endpunkt ist trotzdem öffentlich, weil ihn jede
  * Teilnehmerin im Teammodus abfragt: Wer den Raumcode kennt, sieht damit auch
  * die einzelnen (namenlosen) Antwortsätze. Der Raumcode mit Zufallszusatz ist
