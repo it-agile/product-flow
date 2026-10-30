@@ -1447,6 +1447,30 @@ async function main() {
       !!entwurfsschluessel, entwurfsschluessel);
     check("Datenschutzerklärung nennt genau diesen Schlüssel",
       !!entwurfsschluessel && dsAbschnitt.includes(entwurfsschluessel), entwurfsschluessel);
+
+    /* Die Zahl der Aussagen steht zweimal in der Erklaerung: einmal als
+     * Beschreibung des Fragebogens, einmal in der Aufzaehlung dessen, was
+     * uebertragen wird. Beim Umbau von 15 auf 20 Aussagen ist die zweite
+     * stehengeblieben -- die Erklaerung versprach damit weniger, als wirklich
+     * uebertragen wurde. Die Pruefungen darueber vergleichen nur die FELDER
+     * des Formulars, nicht die Anzahl, deshalb fiel es nicht auf.
+     *
+     * Geprueft wird deshalb gegen den Fragebogen selbst: jede Zahl, die in
+     * dem Abschnitt vor "Aussagen" oder "Bewertungen" steht, muss die Zahl der
+     * Aussagen sein. Das greift auch bei einer dritten Stelle, die jemand
+     * spaeter hinzufuegt. */
+    const fragenblock = (soloHtml.match(/var QUESTIONS = \[([\s\S]*?)\]\.map\(/) || [])[1] || "";
+    const anzahlAussagen = (fragenblock.match(/\{\s*dim:/g) || []).length;
+    check("Anzahl der Aussagen aus dem Fragebogen ermittelt",
+      anzahlAussagen >= 5, anzahlAussagen);
+
+    const genannteZahlen = [...dsAbschnitt.matchAll(/(\d+)\s*(Aussagen|Bewertungen)/g)]
+      .map(m => ({ zahl: Number(m[1]), wort: m[2] }));
+    check("Datenschutzerklärung nennt die Zahl der Aussagen mindestens einmal",
+      genannteZahlen.length > 0);
+    check("Datenschutzerklärung nennt überall dieselbe Zahl wie der Fragebogen",
+      genannteZahlen.length > 0 && genannteZahlen.every(g => g.zahl === anzahlAussagen),
+      { imFragebogen: anzahlAussagen, inDerErklaerung: genannteZahlen });
   }
 
   section("[15] Webinar-Verweis der Landingpage");
