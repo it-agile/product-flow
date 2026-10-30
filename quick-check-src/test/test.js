@@ -638,6 +638,8 @@ async function main() {
       $(doc, "intro-note").textContent.includes("gemeinsamen Profil"));
     check("Intro verspricht keine Kontaktdaten",
       !$(doc, "intro-note").textContent.includes("Kontaktdaten"));
+    check("Teammodus laedt kein Matomo, keine externen Ressourcen",
+      [...doc.querySelectorAll("script[src], link[rel=stylesheet]")].length === 0);
 
     answerAllSteps(doc, win, MIXED);
     await new Promise(r => setTimeout(r, 60));
@@ -1762,8 +1764,15 @@ async function main() {
         .every(a => (a.getAttribute("rel") || "").includes("noopener")));
     check("lang=de", doc.documentElement.getAttribute("lang") === "de");
     check("Viewport-Meta", !!doc.querySelector("meta[name=viewport]"));
-    check("keine externen Ressourcen",
-      [...doc.querySelectorAll("script[src], link[rel=stylesheet]")].length === 0);
+    /* Seit der Matomo-Einbindung fuer den Einzelmodus ist genau eine externe
+     * Ressource erlaubt: das Matomo-Skript. Alles andere bliebe verboten. */
+    {
+      const externe = [...doc.querySelectorAll("script[src], link[rel=stylesheet]")];
+      check("keine externen Ressourcen außer Matomo",
+        externe.length === 1 && externe[0].tagName === "SCRIPT" &&
+        externe[0].src === "https://matomo.it-agile.de/matomo.js",
+        externe.map(el => el.src || el.href));
+    }
     check("alle Formularfelder mit Label",
       [...doc.querySelectorAll("#form-contact input, #form-contact select, #form-contact textarea")]
         .filter(el => el.type !== "hidden")
