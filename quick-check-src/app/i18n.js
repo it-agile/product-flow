@@ -441,7 +441,7 @@ window.QC_I18N = {
       "c.message": "Your message to us",
       "c.optional": "(optional)",
       "c.messagePlaceholder": "What would you like to discuss about your result?",
-      "c.consent.html": "I consent to it-agile GmbH processing my data and have read the <a href=\"../datenschutz.html\" target=\"_blank\" rel=\"noopener\">privacy policy</a>.",
+      "c.consent.html": "I consent to it-agile GmbH processing my data and have read the <a href=\"../privacy.html\" target=\"_blank\" rel=\"noopener\">privacy policy</a>.",
       "c.required": "* Required fields",
       "c.submit": "Submit and show result",
       "c.sending": "Sending …",

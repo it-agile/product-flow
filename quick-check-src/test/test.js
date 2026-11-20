@@ -1972,8 +1972,8 @@ async function main() {
     check("EN: Kontaktformular", $(doc, "screen-contact").textContent.includes("Almost done"));
     const opt = [...$(doc, "c-topic").options].find(o => o.textContent === "Consulting enquiry");
     check("EN: Anliegen übersetzt, übertragener Wert bleibt deutsch", !!opt && opt.value === "Bitte um Beratung");
-    check("EN: Einwilligung verlinkt weiter auf die Datenschutzerklärung",
-      !!doc.querySelector('label[for="c-consent"] a[href="../datenschutz.html"]') &&
+    check("EN: Einwilligung verlinkt auf die englische Datenschutzerklärung",
+      !!doc.querySelector('label[for="c-consent"] a[href="../privacy.html"]') &&
       doc.querySelector('label[for="c-consent"]').textContent.includes("I consent to it-agile GmbH"));
     $(doc, "btn-skip").click();
     const lead = $(doc, "result-lead").textContent;
@@ -2006,6 +2006,25 @@ async function main() {
       $(p.doc, "present-strips").textContent.includes("Activity Flow"));
     check("EN Moderation: Zähler", $(p.doc, "present-count-label").textContent === "responses");
     p.win.close();
+  }
+
+  {
+    /* Die englische Datenschutzerklaerung ist eine Uebersetzung der deutschen.
+     * Beide muessen den Quick Check beschreiben, und die englische muss genau
+     * unter der Adresse liegen, auf die der Einwilligungstext zeigt. */
+    const en = fs.readFileSync(path.join(REPO, "content", "privacy.md"), "utf8");
+    const de = fs.readFileSync(path.join(REPO, "content", "datenschutz.md"), "utf8");
+    check("englische Datenschutzerklärung unter privacy.html", /^url:\s*privacy\.html\s*$/m.test(en));
+    check("englische Datenschutzerklärung mit Sprachangabe en-GB", /^lang:\s*"en-GB"\s*$/m.test(en));
+    const enQc = en.slice(en.indexOf("<h3>ATLAS Quick Check</h3>"));
+    check("englische Erklärung hat den Quick-Check-Abschnitt", en.includes("<h3>ATLAS Quick Check</h3>"));
+    check("englische Erklärung nennt Server, Hetzner und Speicherschlüssel",
+      enQc.includes("atlas-quick-check.it-agile.de") && enQc.includes("Hetzner Online GmbH") &&
+      enQc.includes((soloHtml.match(/var STORAGE_KEY = "([^"]+)"/) || [])[1]));
+    check("beide Fassungen: bis zu 20 Bewertungen, offene werden nicht übertragen",
+      de.includes("deine Bewertungen (bis zu 20; offen gelassene Aussagen werden nicht übertragen)") &&
+      enQc.includes("your ratings (up to 20; statements left unanswered are not transmitted)"));
+    check("deutsche Erklärung verspricht nicht mehr pauschal 20 Bewertungen", !de.includes("deine 20 Bewertungen"));
   }
 
   section("[18] Keine Angabe: Aussagen dürfen offen bleiben");

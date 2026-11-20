@@ -1,19 +1,24 @@
 <!DOCTYPE html><!--  Last Published: Tue Jul 15 2025 12:28:57 GMT+0000 (Coordinated Universal Time)  -->
-<html data-wf-page="6811fc7a1d2462b781d99468" data-wf-site="6811fc7a1d2462b781d9945b" lang="de">
+{{- /* Sprachabhaengige Angaben kommen aus dem Front Matter der Seite (lang,
+     page_title, description, footer_book, footer_imprint, footer_privacy,
+     privacy_url, logo_alt). Fehlen sie, gelten die deutschen Werte; so bleibt
+     content/datenschutz.md unveraendert, content/privacy.md setzt Englisch. */ -}}
+{{- $p := .Params -}}
+<html data-wf-page="6811fc7a1d2462b781d99468" data-wf-site="6811fc7a1d2462b781d9945b" lang="{{ $p.lang | default "de" }}">
 
 <head>
   <meta charset="utf-8">
-  <title>Datenschutz – it-agile GmbH</title>
+  <title>{{ $p.page_title | default "Datenschutz – it-agile GmbH" }}</title>
   <meta
-    content="Erfahre, wie wir mit deinen Daten umgehen: Alle Infos zur Datenverarbeitung, Cookies und deinen Rechten nach DSGVO – klar &amp; verständlich erklärt."
+    content="{{ $p.description | default "Erfahre, wie wir mit deinen Daten umgehen: Alle Infos zur Datenverarbeitung, Cookies und deinen Rechten nach DSGVO – klar & verständlich erklärt." }}"
     name="description">
-  <meta content="Datenschutz –  it-agile GmbH" property="og:title">
+  <meta content="{{ $p.page_title | default "Datenschutz –  it-agile GmbH" }}" property="og:title">
   <meta
-    content="Erfahre, wie wir mit deinen Daten umgehen: Alle Infos zur Datenverarbeitung, Cookies und deinen Rechten nach DSGVO – klar &amp; verständlich erklärt."
+    content="{{ $p.description | default "Erfahre, wie wir mit deinen Daten umgehen: Alle Infos zur Datenverarbeitung, Cookies und deinen Rechten nach DSGVO – klar & verständlich erklärt." }}"
     property="og:description">
-  <meta content="Datenschutz –  it-agile GmbH" property="twitter:title">
+  <meta content="{{ $p.page_title | default "Datenschutz –  it-agile GmbH" }}" property="twitter:title">
   <meta
-    content="Erfahre, wie wir mit deinen Daten umgehen: Alle Infos zur Datenverarbeitung, Cookies und Ihren Rechten nach DSGVO – klar &amp; verständlich erklärt."
+    content="{{ $p.description | default "Erfahre, wie wir mit deinen Daten umgehen: Alle Infos zur Datenverarbeitung, Cookies und Ihren Rechten nach DSGVO – klar & verständlich erklärt." }}"
     property="twitter:description">
   <meta property="og:type" content="website">
   <meta content="summary_large_image" name="twitter:card">
@@ -33,7 +38,7 @@
   <section id="download-energie-klartext-whitepaper" class="section hero">
     <div class="wrapper-brand">
       <a href="index.html" class="brand w-inline-block"><img src="images/it-agile-logo-darkgrey.svg" loading="lazy"
-          alt="Logo it-agile in Schwarz" class="logo _2"></a>
+          alt="{{ $p.logo_alt | default "Logo it-agile in Schwarz" }}" class="logo _2"></a>
     </div>
     <div class="container-content">
       <h1 class="h1-small margin-bottom-2-5">{{ .Title }}</h1>
@@ -45,7 +50,7 @@
       <div class="w-layout-grid grid-2 footer">
         <div id="w-node-f9924cdf-8b86-9c88-c2bf-140a621bd67e-621bd67b">
           <a href="index.html" class="brand w-inline-block"><img src="images/it-agile-logo-darkgrey.svg" loading="lazy"
-              alt="Logo it-agile in Schwarz" class="logo"></a>
+              alt="{{ $p.logo_alt | default "Logo it-agile in Schwarz" }}" class="logo"></a>
         </div>
         <div class="wrapper-footer-flex">
           <div class="flex">
@@ -57,13 +62,12 @@
                 <a href="mailto:hallo@it-agile.de" class="link-intro">hallo@it-agile.de</a>
               </p>
               <p class="intro">
-                <a href="https://calendly.com/it-agile" target="_blank" class="link-intro">Analysegespräch
-                  buchen</a>
+                <a href="https://calendly.com/it-agile" target="_blank" class="link-intro">{{ $p.footer_book | default "Analysegespräch buchen" }}</a>
               </p>
             </div>
             <div class="wrapper-footer-links">
-              <a href="impressum.html" class="link-footer">Impressum</a>
-              <a href="datenschutz.html" aria-current="page" class="link-footer w--current">Datenschutz</a>
+              <a href="impressum.html" class="link-footer">{{ $p.footer_imprint | default "Impressum" }}</a>
+              <a href="{{ $p.privacy_url | default "datenschutz.html" }}" aria-current="page" class="link-footer w--current">{{ $p.footer_privacy | default "Datenschutz" }}</a>
             </div>
           </div>
         </div>
