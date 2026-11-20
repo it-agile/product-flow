@@ -164,7 +164,6 @@
   ].map(function (q, i) {
     q.id = "q" + i;
     q.neg = !!q.neg;
-    q.text = (L.questions && L.questions[i]) || (LB.questions || [])[i] || q.id;
     return q;
   });
 
@@ -177,24 +176,19 @@
   }
 
   // Beschriftung wie im bisherigen Typeform: nur die drei Anker sind benannt.
-  var SCALE_LABELS = lv("scale") || {};
-  var SCALE = [1, 2, 3, 4, 5].map(function (v) { return { v: v, label: SCALE_LABELS[v] || "" }; });
+  // Die Texte setzt localize(), siehe unten.
+  var SCALE_LABELS = {};
+  var SCALE = [1, 2, 3, 4, 5].map(function (v) { return { v: v, label: "" }; });
 
   // Zonen der Zielscheibe. "inclusive" legt fest, ob der obere Randwert noch zur
   // Zone gehört. "tragfähig" beginnt bewusst erst bei 4,0: bei Selbstauskunft
   // über die eigene Organisation ist durchgängige Zustimmung der häufigste Fall,
   // mildere Schwellen liefern dann kein verwertbares Ergebnis.
-  var ZONE_TEXT = lv("zones") || {};
   var ZONES = [
     { key: "low", to: 2, inclusive: false, fill: "#f4ded9", a: 2 },
     { key: "mid", to: 4, inclusive: false, fill: "#f9ecd6", a: 2, b: 4 },
     { key: "high", to: 5, inclusive: true, fill: "#e3ede1", a: 4 }
-  ].map(function (z) {
-    var tx = ZONE_TEXT[z.key] || {};
-    z.label = tx.label || z.key;
-    z.range = (tx.range || "").replace("{a}", fmt(z.a)).replace("{b}", z.b ? fmt(z.b) : "");
-    return z;
-  });
+  ];
 
   function zoneFor(value) {
     for (var i = 0; i < ZONES.length; i++) {
@@ -209,17 +203,11 @@
   // unter 2,0 bzw. bis 3,0; so ausgedrückt gilt die Einordnung unabhängig von
   // der Anzahl der Aussagen und ebenso für Gruppenmittelwerte.
   // Titel und Text je Band stehen in i18n.js unter "bands".
-  var BAND_TEXT = lv("bands") || [];
   var OVERALL_BANDS = [
     { to: 2, inclusive: false },
     { to: 3, inclusive: true },
     { to: 5, inclusive: true }
-  ].map(function (b, i) {
-    var tx = BAND_TEXT[i] || {};
-    b.title = tx.title || "";
-    b.text = tx.text || "";
-    return b;
-  });
+  ];
 
   function overallBandFor(overallMean) {
     for (var i = 0; i < OVERALL_BANDS.length; i++) {
@@ -230,7 +218,33 @@
   }
 
   // Ansatzpunkte je Dimension, deutsch wörtlich aus dem bisherigen Typeform.
-  var MEASURES = lv("measures") || {};
+  var MEASURES = {};
+
+  /* Überträgt die Texte der aktuellen Sprache in die Strukturen oben. Läuft
+   * beim Start und bei jedem Sprachwechsel über den Umschalter; die Objekte
+   * bleiben dieselben, nur ihre Beschriftungen wechseln. */
+  function localize() {
+    QUESTIONS.forEach(function (q, i) {
+      q.text = (L.questions && L.questions[i]) || (LB.questions || [])[i] || q.id;
+    });
+    SCALE_LABELS = lv("scale") || {};
+    SCALE.forEach(function (st) { st.label = SCALE_LABELS[st.v] || ""; });
+    var zt = lv("zones") || {};
+    ZONES.forEach(function (z) {
+      var tx = zt[z.key] || {};
+      z.label = tx.label || z.key;
+      z.range = (tx.range || "").replace("{a}", fmt(z.a)).replace("{b}", z.b ? fmt(z.b) : "");
+    });
+    var bt = lv("bands") || [];
+    OVERALL_BANDS.forEach(function (b, i) {
+      var tx = bt[i] || {};
+      b.title = tx.title || "";
+      b.text = tx.text || "";
+    });
+    MEASURES = lv("measures") || {};
+  }
+
+  localize();
 
   // =====================================================================
   // HILFSFUNKTIONEN
@@ -802,7 +816,10 @@
   var SCREENS = ["screen-intro", "screen-questions", "screen-contact", "screen-result", "screen-present",
     "screen-trainer", "screen-noroom"];
 
+  var current = "screen-intro";   // sichtbarer Bildschirm, für den Sprachwechsel
+
   function show(id) {
+    current = id;
     SCREENS.forEach(function (s) { $(s).hidden = s !== id; });
     window.scrollTo(0, 0);
     updateProgress(id);
@@ -890,7 +907,10 @@
   // ERGEBNIS
   // =====================================================================
 
+  var lastSubmitState = null;   // für das Neuzeichnen nach einem Sprachwechsel
+
   function renderResultSolo(submitState) {
+    lastSubmitState = submitState;
     var sc = scoresFromAnswers(answers);
     $("result-title").textContent = t("r.titleSolo");
     $("result-lead").innerHTML = leadText(sc, t("r.subjectSolo"));
@@ -1495,7 +1515,72 @@
     });
   }
 
+  // =====================================================================
+  // SPRACHUMSCHALTER
+  // =====================================================================
+
+  /* Je angebotener Sprache ein Knopf in der Kopfzeile. Beim Umschalten wird
+   * der aktuelle Bildschirm in der neuen Sprache neu gezeichnet, ohne die Seite
+   * neu zu laden: Antworten, Schritt und ein bereits angezeigtes Ergebnis
+   * bleiben erhalten. Die Wahl steht danach als ?lang= in der Adresse, damit
+   * sie ein Neuladen übersteht -- bewusst nicht im localStorage, denn dort
+   * nennt die Datenschutzerklärung genau einen Schlüssel. */
+  function renderLangSwitch() {
+    var box = $("lang-switch");
+    var codes = Object.keys(I18N);
+    if (codes.length < 2) { box.hidden = true; return; }
+    box.hidden = false;
+    box.setAttribute("aria-label", t("lang.switch"));
+    box.innerHTML = codes.map(function (code) {
+      var b = I18N[code] || {};
+      var active = code === LANG;
+      return '<button type="button" data-lang="' + esc(code) + '" lang="' + esc(b.htmlLang || code) + '"' +
+        ' aria-pressed="' + (active ? "true" : "false") + '"' +
+        ' title="' + esc(b.langName || code) + '" aria-label="' + esc(b.langName || code) + '">' +
+        esc(b.langLabel || code.toUpperCase()) + "</button>";
+    }).join("");
+  }
+
+  function setLang(code) {
+    if (!I18N[code] || code === LANG) return;
+    LANG = code;
+    L = I18N[code];
+    localize();
+    applyStatic();
+    $("intro-note").textContent = MODE === "team" ? t("intro.note.team") : t("intro.note.solo");
+    if (!$("btn-resume").hidden && draft) {
+      $("btn-resume").textContent = t("intro.resume", { n: Object.keys(draft.answers).length, total: QUESTIONS.length });
+    }
+    renderStep();
+    if (current === "screen-result") {
+      if (MODE === "team") renderResultTeam(); else renderResultSolo(lastSubmitState);
+    } else if (current === "screen-present") {
+      renderPresent();
+    } else if (current === "screen-trainer") {
+      updateTokenState();
+      renderTrainerRecent();
+    }
+    if (!$("questions-error").hidden) $("questions-error").textContent = t("q.noneAnswered");
+    // Sichtbare Fehlermeldungen im Kontaktformular in der neuen Sprache
+    if (current === "screen-contact" && [].some.call(document.querySelectorAll("#form-contact .err"),
+      function (e) { return !e.hidden; })) validateContact();
+    updateProgress(current);
+    renderLangSwitch();
+
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set("lang", code);
+      window.history.replaceState(null, "", url.toString());
+    } catch (e) { /* ältere Browser: dann gilt die Wahl nur bis zum Neuladen */ }
+  }
+
+  $("lang-switch").addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest("button[data-lang]") : null;
+    if (b) setLang(b.getAttribute("data-lang"));
+  });
+
   applyStatic();
+  renderLangSwitch();
   $("intro-note").textContent = MODE === "team" ? t("intro.note.team") : t("intro.note.solo");
 
   renderStep();

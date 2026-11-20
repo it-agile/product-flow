@@ -171,12 +171,83 @@
       white-space: nowrap;
     }
 
+    /* Sprachumschalter: kleine Knoepfe, die aktive Sprache hervorgehoben. */
+    .lang-switch {
+      display: flex;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .lang-switch[hidden] {
+      display: none;
+    }
+
+    .lang-switch button {
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      background: transparent;
+      color: var(--ink-muted);
+      border: 0;
+      padding: 4px 10px;
+      min-width: 38px;
+      min-height: 28px;
+      cursor: pointer;
+    }
+
+    .lang-switch button + button {
+      border-left: 1px solid var(--line);
+    }
+
+    .lang-switch button:hover {
+      background: var(--cream);
+      color: var(--ink);
+    }
+
+    .lang-switch button[aria-pressed=true] {
+      background: var(--ink);
+      color: var(--white);
+      cursor: default;
+    }
+
+    /* Schmale Schirme: Umschalter in die erste Zeile neben den Markennamen,
+       Fortschritt in die zweite. Sonst wird die mitlaufende Kopfzeile drei
+       Zeilen hoch und frisst den Platz fuer die Aussagen. */
+    @media (max-width: 560px) {
+      .topbar .spacer {
+        display: none;
+      }
+
+      .topbar .lang-switch {
+        order: 1;
+        margin-left: auto;
+      }
+
+      .topbar .counter-pill,
+      .topbar .steps,
+      .topbar .progress {
+        order: 2;
+      }
+
+      .topbar .steps {
+        flex-basis: auto;
+      }
+    }
+
     .steps {
       display: flex;
       gap: 4px;
       list-style: none;
       margin: 0;
       padding: 0;
+    }
+
+    /* display:flex ueberstimmt sonst das hidden-Attribut: die Balken standen
+       auch auf Start- und Ergebnisseite, wo sie nichts bedeuten. */
+    .steps[hidden] {
+      display: none;
     }
 
     .steps li {
@@ -904,6 +975,7 @@
     <span class="counter-pill" id="counter" hidden></span>
     <ul class="steps" id="steps" hidden aria-hidden="true"></ul>
     <div class="progress" id="progress" aria-live="polite"></div>
+    <div class="lang-switch" id="lang-switch" role="group" aria-label="Sprache" hidden></div>
   </header>
 
   <main id="main">

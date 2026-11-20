@@ -4,7 +4,8 @@
  * Projektordner (final abgestimmt im November 2026). Britisches Englisch.
  *
  * Eine weitere Sprache (etwa "fr") kommt als weiterer Block mit denselben
- * Schlüsseln hinzu. Die App wählt die Sprache nach der Browsersprache
+ * Schlüsseln hinzu (langLabel und langName für den Umschalter in der
+ * Kopfzeile, der seine Knöpfe aus den vorhandenen Blöcken baut). Die App wählt die Sprache nach der Browsersprache
  * (navigator.languages); ?lang=xx in der Adresse übersteuert das. Fehlt ein
  * Schlüssel in einer Sprache, greift Deutsch.
  *
@@ -21,6 +22,8 @@
 window.QC_I18N = {
   de: {
     htmlLang: "de",
+    langLabel: "DE",
+    langName: "Deutsch",
     decimal: ",",
     and: "und",
 
@@ -120,6 +123,7 @@ window.QC_I18N = {
 
     s: {
       "meta.title": "ATLAS Quick Check – Teamübergreifende Lieferfähigkeit",
+      "lang.switch": "Sprache",
 
       // Startseite
       "intro.lead.html": "Wie gut liefert deine IT-Organisation <strong>über Teamgrenzen hinweg</strong>? Der Quick Check bewertet das entlang der fünf ATLAS-Dimensionen.",
@@ -299,6 +303,8 @@ window.QC_I18N = {
 
   en: {
     htmlLang: "en-GB",
+    langLabel: "EN",
+    langName: "English",
     decimal: ".",
     and: "and",
 
@@ -392,6 +398,7 @@ window.QC_I18N = {
 
     s: {
       "meta.title": "ATLAS Quick Check – Cross-Team Delivery Capability",
+      "lang.switch": "Language",
 
       "intro.lead.html": "How well does your IT organisation deliver <strong>across team boundaries</strong>? The Quick Check assesses this along the five ATLAS dimensions.",
       "intro.dims.html": "<strong>A</strong>lignment · <strong>T</strong>eams · <strong>L</strong>eadership · <strong>A</strong>ctivity Flow · <strong>S</strong>tructure",

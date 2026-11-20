@@ -2172,6 +2172,83 @@ async function main() {
     win.close();
   }
 
+  section("[19] Sprachumschalter in der Kopfzeile");
+  const umschalten = (doc, code) => doc.querySelector('#lang-switch button[data-lang="' + code + '"]').click();
+  const gedrueckt = doc => [...doc.querySelectorAll("#lang-switch button")]
+    .filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.getAttribute("data-lang"));
+  {
+    const { doc, win } = boot(soloHtml);
+    check("Umschalter sichtbar mit DE und EN",
+      !$(doc, "lang-switch").hidden &&
+      [...doc.querySelectorAll("#lang-switch button")].map(b => b.textContent).join("|") === "DE|EN");
+    check("aktive Sprache markiert", JSON.stringify(gedrueckt(doc)) === '["de"]', gedrueckt(doc));
+    check("Knöpfe mit ausgeschriebenem Namen für Screenreader",
+      doc.querySelector('#lang-switch button[data-lang="en"]').getAttribute("aria-label") === "English");
+
+    umschalten(doc, "en");
+    check("Startseite wechselt sofort", $(doc, "btn-start").textContent === "Start Quick Check" &&
+      $(doc, "intro-note").textContent.startsWith("20 statements"));
+    check("html lang und Titel wechseln", doc.documentElement.lang === "en-GB" && doc.title.includes("Cross-Team"));
+    check("Wahl steht in der Adresse", new win.URL(win.location.href).searchParams.get("lang") === "en", win.location.href);
+    check("EN jetzt markiert", JSON.stringify(gedrueckt(doc)) === '["en"]');
+    check("Umschalter selbst beschriftet", $(doc, "lang-switch").getAttribute("aria-label") === "Language");
+
+    umschalten(doc, "de");
+    $(doc, "btn-start").click();
+    answerCurrentStep(doc, win, 4);
+    next(doc, win);
+    answerCurrentStep(doc, win, 2);
+    umschalten(doc, "en");
+    check("Fragebogen bleibt auf dem Schritt", $(doc, "dim-title").textContent === "Teams" &&
+      $(doc, "progress").textContent === "Dimension 2 of 5", $(doc, "progress").textContent);
+    check("Aussagen in der neuen Sprache", doc.querySelector("#fs-q4 legend").textContent === "Every team reliably delivers high-quality work.");
+    check("Antworten bleiben ausgewählt", doc.querySelectorAll("#questions input:checked").length === 4);
+    check("Zurück-Knopf übersetzt", $(doc, "btn-back").textContent === "Back: Alignment");
+    for (let i = 2; i < 5; i++) { next(doc, win); answerCurrentStep(doc, win, 3); }
+    next(doc, win);
+    check("Kontaktformular auf Englisch", $(doc, "screen-contact").textContent.includes("Almost done"));
+    fillContact(doc, win, { "c-firstname": "", "c-email": "x", consent: false });
+    submitContact(doc, win);
+    check("Fehlermeldung zuerst auf Englisch", $(doc, "err-firstname").textContent === "Please enter your first name.");
+    umschalten(doc, "de");
+    check("sichtbare Fehlermeldungen wechseln die Sprache",
+      $(doc, "err-firstname").textContent === "Bitte gib deinen Vornamen an." &&
+      $(doc, "err-email").textContent.startsWith("Bitte gib eine gültige"));
+    check("Eingaben bleiben erhalten", $(doc, "c-lastname").value === "Lethmate");
+    $(doc, "btn-skip").click();
+    check("Ergebnis auf Deutsch", $(doc, "result-lead").textContent.includes("von 5"));
+    umschalten(doc, "en");
+    check("Ergebnis wird neu gezeichnet", $(doc, "result-title").textContent === "Your ATLAS profile" &&
+      $(doc, "result-lead").textContent.includes("out of 5") &&
+      $(doc, "result-notes").textContent.includes("without contact details"), $(doc, "result-lead").textContent);
+    check("Zielscheibe auf Englisch", [...doc.querySelectorAll("#radar text")].some(x => x.textContent.startsWith("Activity Flow")));
+    check("Kopfzeile auf Englisch", $(doc, "progress").textContent === "Result");
+    win.close();
+  }
+  {
+    // Fortsetzen-Knopf wechselt mit
+    const { doc, win } = boot(soloHtml, { seedDraft: { answers: { q0: 3, q1: 4 }, reached: 0 } });
+    umschalten(doc, "en");
+    check("Fortsetzen-Knopf übersetzt", $(doc, "btn-resume").textContent === "Continue where you left off (2 of 20 rated)",
+      $(doc, "btn-resume").textContent);
+    win.close();
+  }
+  {
+    const { doc, win } = bootPresent(aggregateMitProfilen(PROFILE));
+    await new Promise(r => setTimeout(r, 40));
+    umschalten(doc, "en");
+    check("Moderationsansicht wechselt", $(doc, "present-legend").textContent.includes("one response") &&
+      $(doc, "present-count-label").textContent === "responses" && $(doc, "progress").textContent === "Facilitation");
+    win.close();
+    const t2 = boot(teamHtml, { url: "https://atlas-quick-check.it-agile.de/quick-check/?trainer=1",
+      fetchImpl: () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ count: 0 }) }) });
+    umschalten(t2.doc, "en");
+    check("Trainerseite wechselt", $(t2.doc, "trainer-token-state").textContent.startsWith("Not stored") &&
+      $(t2.doc, "screen-trainer").textContent.includes("Prepare workshop"));
+    check("Trainerseite behält ?trainer=1", new t2.win.URL(t2.win.location.href).searchParams.get("trainer") === "1");
+    t2.win.close();
+  }
+
   console.log("\n=======================================");
   console.log("  " + pass + " Prüfungen bestanden, " + fail + " fehlgeschlagen");
   console.log("=======================================");
