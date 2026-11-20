@@ -910,13 +910,13 @@
     <!-- ============ Intro ============ -->
     <section id="screen-intro" class="card">
       <h1>ATLAS Quick Check</h1>
-      <p class="lead">Wie gut liefert deine IT-Organisation <strong>über Teamgrenzen hinweg</strong>? Der Quick Check
+      <p class="lead" data-i18n-html="intro.lead.html">Wie gut liefert deine IT-Organisation <strong>über Teamgrenzen hinweg</strong>? Der Quick Check
         bewertet das entlang der fünf ATLAS-Dimensionen.</p>
-      <p><strong>A</strong>lignment · <strong>T</strong>eams · <strong>L</strong>eadership ·
+      <p data-i18n-html="intro.dims.html"><strong>A</strong>lignment · <strong>T</strong>eams · <strong>L</strong>eadership ·
         <strong>A</strong>rbeitsfluss · <strong>S</strong>truktur</p>
       <p class="muted" id="intro-note"></p>
       <div class="actions">
-        <button class="btn" type="button" id="btn-start">Quick Check starten</button>
+        <button class="btn" type="button" id="btn-start" data-i18n="intro.start">Quick Check starten</button>
         <button class="btn-link" type="button" id="btn-resume" hidden>Begonnenen Check fortsetzen</button>
       </div>
     </section>
@@ -928,9 +928,11 @@
           <span class="dim-letter" id="dim-letter" aria-hidden="true"></span>
           <h1 id="dim-title"></h1>
         </div>
-        <p class="muted" id="dim-hint">Bewerte jede Aussage danach, wie stark sie auf deinen Verantwortungsbereich
+        <p class="muted" id="dim-hint" data-i18n="q.hint">Bewerte jede Aussage danach, wie stark sie auf deinen Verantwortungsbereich
           zutrifft.</p>
-        <div class="scale-legend"><span>1 = Stimme gar nicht zu</span><span>5 = Stimme voll und ganz zu</span></div>
+        <p class="muted" id="skip-hint" data-i18n="q.skipHint">Wenn du eine Aussage nicht einschätzen kannst, lass sie offen. Ein erneuter
+          Klick auf den gewählten Wert hebt die Auswahl wieder auf.</p>
+        <div class="scale-legend"><span data-i18n="q.legendLow">1 = Stimme gar nicht zu</span><span data-i18n="q.legendHigh">5 = Stimme voll und ganz zu</span></div>
         <form id="form-questions" novalidate>
           <div id="questions"></div>
           <div id="questions-error" class="notice" hidden></div>
@@ -945,54 +947,54 @@
     <!-- ============ Kontaktdaten (nur Einzelmodus) ============ -->
     <section id="screen-contact" hidden>
       <div class="card">
-        <h1>Fast fertig</h1>
-        <p class="lead">Wenn du magst, melden wir uns bei dir und ordnen dein Ergebnis gemeinsam mit dir ein.</p>
-        <p class="muted">Dafür speichern wir deine Angaben. Auf dein Ergebnis hat das keinen Einfluss – es wird in
+        <h1 data-i18n="c.title">Fast fertig</h1>
+        <p class="lead" data-i18n="c.lead">Wenn du magst, melden wir uns bei dir und ordnen dein Ergebnis gemeinsam mit dir ein.</p>
+        <p class="muted" data-i18n="c.note">Dafür speichern wir deine Angaben. Auf dein Ergebnis hat das keinen Einfluss – es wird in
           deinem Browser berechnet und dir in jedem Fall vollständig angezeigt.</p>
         <form id="form-contact" novalidate>
           <div class="grid2">
             <div class="field">
-              <label for="c-firstname">Vorname <span class="req" aria-hidden="true">*</span></label>
+              <label for="c-firstname"><span data-i18n="c.firstname">Vorname</span> <span class="req" aria-hidden="true">*</span></label>
               <input type="text" id="c-firstname" name="firstname" autocomplete="given-name" required>
               <div class="err" id="err-firstname" hidden></div>
             </div>
             <div class="field">
-              <label for="c-lastname">Nachname <span class="req" aria-hidden="true">*</span></label>
+              <label for="c-lastname"><span data-i18n="c.lastname">Nachname</span> <span class="req" aria-hidden="true">*</span></label>
               <input type="text" id="c-lastname" name="lastname" autocomplete="family-name" required>
               <div class="err" id="err-lastname" hidden></div>
             </div>
           </div>
           <div class="grid2">
             <div class="field">
-              <label for="c-email">E-Mail <span class="req" aria-hidden="true">*</span></label>
+              <label for="c-email"><span data-i18n="c.email">E-Mail</span> <span class="req" aria-hidden="true">*</span></label>
               <input type="email" id="c-email" name="email" autocomplete="email" required>
               <div class="err" id="err-email" hidden></div>
             </div>
             <div class="field">
-              <label for="c-phone">Telefon</label>
+              <label for="c-phone" data-i18n="c.phone">Telefon</label>
               <input type="tel" id="c-phone" name="phone" autocomplete="tel"
-                placeholder="Telefon für schnellsten Kontakt">
+                placeholder="Telefon für schnellsten Kontakt" data-i18n-placeholder="c.phonePlaceholder">
             </div>
           </div>
           <div class="field">
-            <label for="c-company">Unternehmen</label>
+            <label for="c-company" data-i18n="c.company">Unternehmen</label>
             <input type="text" id="c-company" name="company" autocomplete="organization">
           </div>
           <div class="field">
-            <label for="c-topic">Womit können wir Dir helfen?</label>
+            <label for="c-topic" data-i18n="c.topic">Womit können wir Dir helfen?</label>
             <select id="c-topic" name="topic">
-              <option value="">Bitte wählen</option>
-              <option>Frage zu einer Schulung</option>
-              <option>Frage zu einem Angebot</option>
-              <option>Bitte um Beratung</option>
-              <option>Organisatorische Frage</option>
-              <option>Sonstiges</option>
+              <option value="" data-i18n="c.topic.none">Bitte wählen</option>
+              <option value="Frage zu einer Schulung" data-i18n="c.topic.training">Frage zu einer Schulung</option>
+              <option value="Frage zu einem Angebot" data-i18n="c.topic.offer">Frage zu einem Angebot</option>
+              <option value="Bitte um Beratung" data-i18n="c.topic.consulting">Bitte um Beratung</option>
+              <option value="Organisatorische Frage" data-i18n="c.topic.organisational">Organisatorische Frage</option>
+              <option value="Sonstiges" data-i18n="c.topic.other">Sonstiges</option>
             </select>
           </div>
           <div class="field">
-            <label for="c-message">Deine Nachricht an uns <span class="hint">(optional)</span></label>
+            <label for="c-message"><span data-i18n="c.message">Deine Nachricht an uns</span> <span class="hint" data-i18n="c.optional">(optional)</span></label>
             <textarea id="c-message" name="message" rows="4"
-              placeholder="Was möchtest Du zu Deinem Ergebnis besprechen?"></textarea>
+              placeholder="Was möchtest Du zu Deinem Ergebnis besprechen?" data-i18n-placeholder="c.messagePlaceholder"></textarea>
           </div>
 
           <!-- Spam-Falle: für Menschen unsichtbar, für Bots attraktiv.
@@ -1004,20 +1006,20 @@
 
           <div class="consent">
             <input type="checkbox" id="c-consent" name="consent" required>
-            <label for="c-consent">Ich willige in die Verarbeitung meiner Daten durch die it-agile GmbH ein und
+            <label for="c-consent"><span data-i18n-html="c.consent.html">Ich willige in die Verarbeitung meiner Daten durch die it-agile GmbH ein und
               habe die <a href="../datenschutz.html" target="_blank" rel="noopener">Datenschutzerklärung</a> zur
-              Kenntnis genommen. <span class="req" aria-hidden="true">*</span></label>
+              Kenntnis genommen.</span> <span class="req" aria-hidden="true">*</span></label>
           </div>
           <div class="err" id="err-consent" hidden></div>
-          <p class="req-note">* Benötigte Angaben</p>
+          <p class="req-note" data-i18n="c.required">* Benötigte Angaben</p>
 
           <div id="submit-error" class="notice" hidden></div>
 
           <div class="actions">
-            <button class="btn" type="submit" id="btn-submit">Absenden und Ergebnis anzeigen</button>
-            <button class="btn-link" type="button" id="btn-back-questions">Zurück zu den Fragen</button>
+            <button class="btn" type="submit" id="btn-submit" data-i18n="c.submit">Absenden und Ergebnis anzeigen</button>
+            <button class="btn-link" type="button" id="btn-back-questions" data-i18n="c.backToQuestions">Zurück zu den Fragen</button>
           </div>
-          <p><button class="btn-link" type="button" id="btn-skip">Ergebnis ohne Kontaktdaten ansehen</button></p>
+          <p><button class="btn-link" type="button" id="btn-skip" data-i18n="c.skip">Ergebnis ohne Kontaktdaten ansehen</button></p>
         </form>
       </div>
     </section>
@@ -1048,21 +1050,21 @@
         <div id="result-notes"></div>
 
         <div class="cta-box" id="cta-box">
-          <h2>Wie geht es weiter?</h2>
-          <p>Das Profil zeigt, wo der Fluss zwischen euren Teams stockt – aber nicht warum. Vereinbare gerne einen
+          <h2 data-i18n="cta.title">Wie geht es weiter?</h2>
+          <p data-i18n="cta.text">Das Profil zeigt, wo der Fluss zwischen euren Teams stockt – aber nicht warum. Vereinbare gerne einen
             Termin mit uns, um weitere Optionen zu besprechen.</p>
           <p><a class="btn" href="https://calendly.com/it-agile?l=kontaktseite" target="_blank"
-              rel="noopener">Termin vereinbaren</a>
-            <a class="btn btn-secondary" href="../" style="margin-left:8px">Mehr über Flow-Optimierung</a>
+              rel="noopener" data-i18n="cta.book">Termin vereinbaren</a>
+            <a class="btn btn-secondary" href="../" style="margin-left:8px" data-i18n="cta.more">Mehr über Flow-Optimierung</a>
           </p>
           <p class="muted" style="margin-bottom:0"><a
-              href="../documents/ITA-Flowoptimierung-Whitepaper-2025.pdf">Whitepaper zur Flow-Optimierung
+              href="../documents/ITA-Flowoptimierung-Whitepaper-2025.pdf" data-i18n="cta.whitepaper">Whitepaper zur Flow-Optimierung
               herunterladen (PDF)</a></p>
         </div>
 
         <div class="actions">
-          <button class="btn btn-secondary" type="button" id="btn-print">Ergebnis drucken oder als PDF speichern</button>
-          <button class="btn-link" type="button" id="btn-restart">Check neu starten</button>
+          <button class="btn btn-secondary" type="button" id="btn-print" data-i18n="r.print">Ergebnis drucken oder als PDF speichern</button>
+          <button class="btn-link" type="button" id="btn-restart" data-i18n="r.restart">Check neu starten</button>
         </div>
       </div>
     </section>
@@ -1072,24 +1074,24 @@
       <div class="card">
         <div class="present-grid">
           <div class="join-box">
-            <h2 style="margin-top:0">Mitmachen</h2>
+            <h2 style="margin-top:0" data-i18n="p.join">Mitmachen</h2>
             <div id="present-qr"></div>
             <div class="join-url" id="present-url"></div>
-            <p class="muted" style="margin-top:14px;margin-bottom:2px">Raumcode</p>
+            <p class="muted" style="margin-top:14px;margin-bottom:2px" data-i18n="p.roomCode">Raumcode</p>
             <div class="room-code" id="present-room"></div>
             <p class="count-big" id="present-count">0</p>
             <p class="muted" id="present-count-label">Rückmeldungen</p>
             <div class="actions" style="justify-content:center">
-              <button class="btn-link" type="button" id="btn-reset">Raum zurücksetzen</button>
+              <button class="btn-link" type="button" id="btn-reset" data-i18n="p.reset">Raum zurücksetzen</button>
             </div>
-            <p class="muted" style="margin-top:2px;margin-bottom:0">Leert <strong>nur
+            <p class="muted" style="margin-top:2px;margin-bottom:0" data-i18n-html="p.resetHint.html">Leert <strong>nur
               diesen Raum</strong>. Andere Räume und die Anfragen aus dem Einzelmodus
               bleiben unberührt. Verlangt das Admin-Token; auf der
               <a href="?trainer=1">Trainerseite</a> lässt es sich einmalig hinterlegen.</p>
             <div class="notice" id="present-msg" hidden></div>
           </div>
           <div>
-            <h1 style="margin-top:0">ATLAS-Profil der Gruppe</h1>
+            <h1 style="margin-top:0" data-i18n="p.title">ATLAS-Profil der Gruppe</h1>
             <p class="muted" id="present-hint">Das Diagramm aktualisiert sich automatisch.</p>
             <div class="radar-wrap" id="present-radar"></div>
             <ul class="zone-legend" id="present-legend"></ul>
@@ -1098,9 +1100,9 @@
               <table class="scores">
                 <thead>
                   <tr>
-                    <th scope="col">Dimension</th>
-                    <th scope="col" style="text-align:right">Mittelwert</th>
-                    <th scope="col" style="text-align:right">Einordnung</th>
+                    <th scope="col" data-i18n="r.colDimension">Dimension</th>
+                    <th scope="col" style="text-align:right" data-i18n="r.colAverage">Mittelwert</th>
+                    <th scope="col" style="text-align:right" data-i18n="r.colRating">Einordnung</th>
                   </tr>
                 </thead>
                 <tbody id="present-scores"></tbody>
@@ -1114,8 +1116,8 @@
     <!-- ============ Kein Raum (nur Teammodus, ohne oder mit ?room=default) ============ -->
     <section id="screen-noroom" hidden>
       <div class="card">
-        <h1>Kein Raum angegeben</h1>
-        <p class="lead">Der Teammodus des ATLAS Quick Check läuft immer in einem eigenen Raum. Bitte den Link
+        <h1 data-i18n="nr.title">Kein Raum angegeben</h1>
+        <p class="lead" data-i18n="nr.text">Der Teammodus des ATLAS Quick Check läuft immer in einem eigenen Raum. Bitte den Link
           oder QR-Code aus der Einladung zum Workshop verwenden.</p>
       </div>
     </section>
@@ -1123,45 +1125,45 @@
     <!-- ============ Trainerseite (nur Teammodus, ?trainer=1) ============ -->
     <section id="screen-trainer" hidden>
       <div class="card">
-        <h1>Workshop vorbereiten</h1>
-        <p class="lead">Raumcode festlegen und die Moderationsansicht öffnen. Diese Seite
+        <h1 data-i18n="t.title">Workshop vorbereiten</h1>
+        <p class="lead" data-i18n="t.lead">Raumcode festlegen und die Moderationsansicht öffnen. Diese Seite
           lässt sich als Lesezeichen speichern.</p>
 
         <div class="field">
-          <label for="trainer-room">Raumcode</label>
-          <input type="text" id="trainer-room" maxlength="40" placeholder="z. B. kunde-4823"
+          <label for="trainer-room" data-i18n="t.roomLabel">Raumcode</label>
+          <input type="text" id="trainer-room" maxlength="40" placeholder="z. B. kunde-4823" data-i18n-placeholder="t.roomPlaceholder"
             autocomplete="off" autocapitalize="none" spellcheck="false">
-          <div class="hint">Nicht nur den Kundennamen nehmen. Die Auswertung ist ohne
+          <div class="hint" data-i18n="t.roomHint">Nicht nur den Kundennamen nehmen. Die Auswertung ist ohne
             Anmeldung abrufbar – wer den Code errät, sieht sie, samt der einzelnen
             Bewertungen. Namen stehen nirgends, aber der Zufallszusatz ist der
             eigentliche Schutz; die Teilnehmenden tippen den Code ohnehin nie, er steckt
             im QR-Code.</div>
         </div>
         <div class="actions">
-          <button class="btn" type="button" id="btn-trainer-open">Moderationsansicht öffnen</button>
-          <button class="btn btn-secondary" type="button" id="btn-trainer-dice">Zufallszusatz anhängen</button>
+          <button class="btn" type="button" id="btn-trainer-open" data-i18n="t.open">Moderationsansicht öffnen</button>
+          <button class="btn btn-secondary" type="button" id="btn-trainer-dice" data-i18n="t.dice">Zufallszusatz anhängen</button>
         </div>
         <div class="notice" id="trainer-msg" hidden></div>
 
-        <h2>Zuletzt benutzt</h2>
-        <p class="muted">„Zurücksetzen“ löscht die Rückmeldungen des Raums auf dem
+        <h2 data-i18n="t.recent">Zuletzt benutzt</h2>
+        <p class="muted" data-i18n="t.recentHint">„Zurücksetzen“ löscht die Rückmeldungen des Raums auf dem
           Server und wirkt für alle. „Aus Liste entfernen“ betrifft nur diese Ansicht
           hier; die Daten auf dem Server bleiben davon unberührt.</p>
         <div id="trainer-recent"></div>
         <div class="notice" id="trainer-rooms-msg" hidden></div>
 
-        <h2>Admin-Token</h2>
-        <p class="muted">Einmal hinterlegen, dann verlangt „Raum zurücksetzen“ nur noch
+        <h2 data-i18n="t.tokenTitle">Admin-Token</h2>
+        <p class="muted" data-i18n="t.tokenHint">Einmal hinterlegen, dann verlangt „Raum zurücksetzen“ nur noch
           eine Bestätigung. Das Token bleibt in diesem Browser und wird nirgendwohin
           übertragen. Auf fremder Hardware hinterher löschen.</p>
         <div class="field">
-          <label for="trainer-token">Token</label>
+          <label for="trainer-token" data-i18n="t.tokenLabel">Token</label>
           <input type="password" id="trainer-token" autocomplete="off" spellcheck="false">
           <div class="hint" id="trainer-token-state"></div>
         </div>
         <div class="actions">
-          <button class="btn btn-secondary" type="button" id="btn-trainer-token-save">Token merken</button>
-          <button class="btn-link" type="button" id="btn-trainer-token-clear">Token von diesem Gerät löschen</button>
+          <button class="btn btn-secondary" type="button" id="btn-trainer-token-save" data-i18n="t.tokenSave">Token merken</button>
+          <button class="btn-link" type="button" id="btn-trainer-token-clear" data-i18n="t.tokenClear">Token von diesem Gerät löschen</button>
         </div>
         <div class="notice" id="trainer-token-msg" hidden></div>
       </div>
@@ -1170,6 +1172,8 @@
 
   <!-- Konfiguration je Deployment. Wird von sync.py eingesetzt. -->
   <!--QC_CONFIG-->
+  <!-- Texte aller Sprachen, gemeinsam für Einzel- und Teammodus. -->
+  <!--QC_I18N-->
   <!-- Anwendungslogik, gemeinsam für Einzel- und Teammodus. -->
   <!--QC_APP-->
   <!-- Matomo: nur im Einzelmodus (it-team-flow.de). Im Teammodus (Workshops)

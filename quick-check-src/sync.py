@@ -3,7 +3,8 @@
 
 Quelle:
     app/index.html      Markup und CSS, mit den Platzhaltern
-                        <!--QC_CONFIG--> und <!--QC_APP-->
+                        <!--QC_CONFIG-->, <!--QC_I18N--> und <!--QC_APP-->
+    app/i18n.js         Texte aller Sprachen, gemeinsam für beide Modi
     app/app.js          gemeinsame Logik für beide Modi
     app/config.solo.js  Konfiguration Einzelmodus
     app/config.team.js  Konfiguration Teammodus
@@ -31,6 +32,7 @@ REPO = SRC.parent
 APP_DIR = SRC / "app"
 TEMPLATE = APP_DIR / "index.html"
 APP_JS = APP_DIR / "app.js"
+I18N_JS = APP_DIR / "i18n.js"
 
 FONTS = ["NotoSans-Regular.ttf", "NotoSans-Bold.ttf",
          "SourceSans3-Regular.ttf", "SourceSans3-Bold.ttf"]
@@ -64,12 +66,14 @@ def build(mode):
     template = TEMPLATE.read_text(encoding="utf8")
     config = (APP_DIR / ("config.%s.js" % mode)).read_text(encoding="utf8")
     app = APP_JS.read_text(encoding="utf8")
+    i18n = I18N_JS.read_text(encoding="utf8")
 
-    for placeholder in ("<!--QC_CONFIG-->", "<!--QC_APP-->"):
+    for placeholder in ("<!--QC_CONFIG-->", "<!--QC_I18N-->", "<!--QC_APP-->"):
         if placeholder not in template:
             sys.exit("Platzhalter %s fehlt in %s" % (placeholder, TEMPLATE))
 
     out = template.replace("<!--QC_CONFIG-->", script_block(config, "Konfiguration: %s" % mode))
+    out = out.replace("<!--QC_I18N-->", script_block(i18n, "Texte aller Sprachen"))
     out = out.replace("<!--QC_APP-->", script_block(app, "Anwendungslogik"))
 
     out = out.replace("__QC_BASE__", basis_url())

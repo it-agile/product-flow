@@ -83,6 +83,12 @@ function boot(html, opts) {
     url: opts.url || "https://it-team-flow.de/quick-check/",
     pretendToBeVisual: true,
     beforeParse(window) {
+      /* jsdom meldet sich als en-US. Die bestehenden Pruefungen reden Deutsch,
+       * deshalb ist Deutsch hier die Voreinstellung; opts.languages setzt eine
+       * andere Browsersprache. */
+      const langs = opts.languages || ["de-DE", "de"];
+      Object.defineProperty(window.navigator, "languages", { get: () => langs, configurable: true });
+      Object.defineProperty(window.navigator, "language", { get: () => langs[0], configurable: true });
       window.HTMLElement.prototype.scrollIntoView = function () {};
       window.scrollTo = function () {};
       window.print = function () { window.__printed = true; };
@@ -222,22 +228,26 @@ section("[2] Einzelmodus: fünf Schritte");
    * Fragebogen als den ausgelieferten. */
   const appSrc = fs.readFileSync(path.join(SRC, "app", "app.js"), "utf8");
   const qSrc = appSrc.slice(appSrc.indexOf("var QUESTIONS = ["), appSrc.indexOf("].map(function (q, i)"));
-  const eintraege = [...qSrc.matchAll(/\{ dim: "([^"]+)",( neg: true,)? text: "/g)];
+  const eintraege = [...qSrc.matchAll(/\{ dim: "([^"]+)"(, neg: true)? \}/g)];
   check("Fragebogen in app.js hat 20 Aussagen", eintraege.length === N, eintraege.length);
   check("Dimension je Aussage wie in app.js",
     JSON.stringify(eintraege.map(m => m[1])) === JSON.stringify(QUESTION_DIMS), eintraege.map(m => m[1]));
   check("Richtung je Aussage wie in app.js",
     JSON.stringify(eintraege.map(m => !!m[2])) === JSON.stringify(QUESTION_NEG), eintraege.map(m => !!m[2]));
   check("neun Aussagen sind negativ formuliert", QUESTION_NEG.filter(Boolean).length === 9);
-  check("Grammatik: auf strategische Ziele", appSrc.includes("auf strategische Ziele einzahlt"));
+  const i18nSrc = fs.readFileSync(path.join(SRC, "app", "i18n.js"), "utf8");
+  check("Grammatik: auf strategische Ziele", i18nSrc.includes("auf strategische Ziele einzahlt"));
   check("Kontakt-Screen erreicht", visible(doc, "screen-contact"));
 }
 {
   const { doc, win } = boot(soloHtml);
   $(doc, "btn-start").click();
+  /* Seit November 2026 duerfen Aussagen offen bleiben ("keine Angabe").
+   * Weiter geht es deshalb auch ohne Antworten. */
   next(doc, win);
-  check("Weiter ohne Antworten blockiert", $(doc, "dim-title").textContent === DIMS[0]);
-  check("Fehlerhinweis nennt 4 offene", $(doc, "questions-error").textContent.includes("4"));
+  check("Weiter ohne Antworten erlaubt (keine Angabe)", $(doc, "dim-title").textContent === DIMS[1]);
+  check("kein Fehlerhinweis bei offenen Aussagen", $(doc, "questions-error").hidden);
+  $(doc, "btn-back").click();
   answerCurrentStep(doc, win, 5);
   next(doc, win);
   answerCurrentStep(doc, win, 2);
@@ -1870,6 +1880,277 @@ async function main() {
       .forEach(f => check("Schrift im Repo: " + f,
         fs.existsSync(path.join(REPO, "static", "fonts", f))));
     check("Favicon im Repo", fs.existsSync(path.join(REPO, "static", "images", "favicon.png")));
+  }
+
+  section("[17] Mehrsprachigkeit: Auswahl nach Browsersprache");
+  {
+    // Texte direkt aus der Quelle, damit die Pruefungen nicht an einer Abschrift haengen.
+    const ctxI18n = { window: {} };
+    require("vm").runInNewContext(fs.readFileSync(path.join(SRC, "app", "i18n.js"), "utf8"), ctxI18n);
+    const I18N = ctxI18n.window.QC_I18N;
+    const de = I18N.de, en = I18N.en;
+
+    check("Deutsch und Englisch vorhanden", !!de && !!en);
+    check("Englisch kennt jeden deutschen Textschlüssel",
+      Object.keys(de.s).every(k => k in en.s), Object.keys(de.s).filter(k => !(k in en.s)));
+    check("keine englischen Schlüssel ohne deutsches Gegenstück",
+      Object.keys(en.s).every(k => k in de.s), Object.keys(en.s).filter(k => !(k in de.s)));
+    ["de", "en"].forEach(l => {
+      const b = I18N[l];
+      check(l + ": 20 Aussagen", Array.isArray(b.questions) && b.questions.length === N, (b.questions || []).length);
+      check(l + ": Name, Erklärsatz und drei Ansatzpunkte je Dimension",
+        DIMS.every(d => b.dims[d] && b.dimIntro[d] && (b.measures[d] || []).length === 3));
+      check(l + ": drei Bänder der Gesamtbewertung", b.bands.length === 3);
+    });
+    check("Kürzel ATLAS bleibt im Englischen erhalten",
+      DIMS.map(d => en.dims[d].charAt(0)).join("") === "ATLAS", DIMS.map(d => en.dims[d]));
+    check("Activity Flow und Structure", en.dims.Arbeitsfluss === "Activity Flow" && en.dims.Struktur === "Structure");
+    check("Dezimalpunkt im Englischen, Komma im Deutschen", en.decimal === "." && de.decimal === ",");
+
+    /* Jeder Schluessel im Markup muss existieren; sonst stuende der Schluessel
+     * selbst auf der Seite. */
+    const plain = new JSDOM(soloHtml).window.document;
+    const keysIn = attr => [...plain.querySelectorAll("[" + attr + "]")].map(e => e.getAttribute(attr));
+    const alleSchluessel = keysIn("data-i18n").concat(keysIn("data-i18n-html"), keysIn("data-i18n-placeholder"));
+    check("Markup nutzt nur vorhandene Schlüssel",
+      alleSchluessel.length > 30 && alleSchluessel.every(k => k in de.s),
+      alleSchluessel.filter(k => !(k in de.s)));
+
+    /* Das Markup traegt die deutsche Fassung, damit die Seite vor dem Skript
+     * lesbar ist. Die Sprachdatei ersetzt sie. Laufen beide auseinander, sieht
+     * man je nach Ladezustand zwei verschiedene Texte. */
+    const norm = s => s.replace(/\s+/g, " ").trim();
+    const textOf = html => { const d = new JSDOM("<body>" + html + "</body>").window.document; return d.body.textContent; };
+    const abweichend = [];
+    plain.querySelectorAll("[data-i18n]").forEach(e => {
+      if (norm(e.textContent) !== norm(de.s[e.getAttribute("data-i18n")] || "")) abweichend.push(e.getAttribute("data-i18n"));
+    });
+    plain.querySelectorAll("[data-i18n-html]").forEach(e => {
+      const k = e.getAttribute("data-i18n-html");
+      if (norm(e.textContent) !== norm(textOf(de.s[k] || ""))) abweichend.push(k);
+    });
+    plain.querySelectorAll("[data-i18n-placeholder]").forEach(e => {
+      if (e.getAttribute("placeholder") !== de.s[e.getAttribute("data-i18n-placeholder")]) abweichend.push(e.getAttribute("data-i18n-placeholder"));
+    });
+    check("deutscher Text im Markup gleich dem in i18n.js", abweichend.length === 0, abweichend);
+
+    // Auswahl der Sprache
+    const sprache = (languages, url) => {
+      const { doc, win } = boot(soloHtml, { languages, url });
+      const r = { lang: doc.documentElement.lang, start: $(doc, "btn-start").textContent };
+      win.close();
+      return r;
+    };
+    check("de-DE ergibt Deutsch", sprache(["de-DE"]).lang === "de");
+    check("de-AT ergibt Deutsch", sprache(["de-AT", "en"]).lang === "de");
+    check("en-US ergibt Englisch (britische Fassung)", sprache(["en-US"]).lang === "en-GB");
+    check("erste angebotene Sprache der Liste zählt", sprache(["fr-FR", "de-DE", "en"]).lang === "de");
+    check("nicht angebotene Sprache fällt auf Englisch zurück", sprache(["fr-FR"]).lang === "en-GB");
+    check("?lang=en übersteuert die Browsersprache",
+      sprache(["de-DE"], "https://it-team-flow.de/quick-check/?lang=en").lang === "en-GB");
+    check("?lang=de übersteuert die Browsersprache",
+      sprache(["en-GB"], "https://it-team-flow.de/quick-check/?lang=de").lang === "de");
+    check("unbekanntes ?lang wird ignoriert",
+      sprache(["de-DE"], "https://it-team-flow.de/quick-check/?lang=xx").lang === "de");
+    check("Startknopf übersetzt", sprache(["en"]).start === "Start Quick Check");
+  }
+  {
+    // Ein Durchlauf auf Englisch im Einzelmodus
+    const { doc, win } = boot(soloHtml, { languages: ["en-GB"] });
+    check("EN: Seitentitel", doc.title === "ATLAS Quick Check – Cross-Team Delivery Capability", doc.title);
+    check("EN: Kürzelzeile", $(doc, "screen-intro").textContent.includes("ctivity Flow"));
+    check("EN: Intro Einzelmodus", $(doc, "intro-note").textContent.startsWith("20 statements in five steps"));
+    $(doc, "btn-start").click();
+    check("EN: Fortschritt", $(doc, "progress").textContent === "Dimension 1 of 5");
+    check("EN: erste Aussage", doc.querySelector("#fs-q0 legend").textContent === "The company's strategic goals are clear to employees.");
+    check("EN: Skalenanker", doc.querySelector("#questions .scale-txt").textContent === "Strongly disagree");
+    check("EN: Hinweis auf keine Angabe", $(doc, "skip-hint").textContent.includes("leave it blank"));
+    for (let i = 0; i < 4; i++) { answerCurrentStep(doc, win, MIXED[DIMS[i]]); next(doc, win); }
+    answerCurrentStep(doc, win, MIXED[DIMS[4]]);
+    check("EN: letzter Knopf", $(doc, "btn-next").textContent === "Continue to contact details");
+    next(doc, win);
+    check("EN: Kontaktformular", $(doc, "screen-contact").textContent.includes("Almost done"));
+    const opt = [...$(doc, "c-topic").options].find(o => o.textContent === "Consulting enquiry");
+    check("EN: Anliegen übersetzt, übertragener Wert bleibt deutsch", !!opt && opt.value === "Bitte um Beratung");
+    check("EN: Einwilligung verlinkt weiter auf die Datenschutzerklärung",
+      !!doc.querySelector('label[for="c-consent"] a[href="../datenschutz.html"]') &&
+      doc.querySelector('label[for="c-consent"]').textContent.includes("I consent to it-agile GmbH"));
+    $(doc, "btn-skip").click();
+    const lead = $(doc, "result-lead").textContent;
+    check("EN: Einleitung mit Dezimalpunkt", lead.includes("Across all five dimensions") && lead.includes("3.0 out of 5"), lead);
+    check("EN: Dimensionsnamen im Ergebnis", lead.includes("Structure"), lead);
+    const nums = [...doc.querySelectorAll("#scores-body td.num")].map(td => td.textContent.trim());
+    check("EN: Tabelle mit Dezimalpunkt", JSON.stringify(nums) === JSON.stringify(DIMS.map(d => MIXED[d].toFixed(1) + " out of 5")), nums);
+    check("EN: Zonenlegende", $(doc, "zone-legend").textContent.includes("area for development (below 2.0)"));
+    check("EN: Ansatzpunkte", $(doc, "measures").textContent.includes("Starting points") &&
+      $(doc, "measures").textContent.includes("Modularise systems"));
+    check("EN: kein deutscher Rest im Ergebnis",
+      !/(von 5|Mittelwert|Ansatzpunkte|Entwicklungsfeld|Arbeitsfluss)/.test($(doc, "screen-result").textContent),
+      ($(doc, "screen-result").textContent.match(/.{0,30}(von 5|Mittelwert|Ansatzpunkte|Entwicklungsfeld|Arbeitsfluss).{0,30}/) || [])[0]);
+    win.close();
+  }
+  {
+    const { doc, win } = boot(teamHtml, { languages: ["en-GB"], url: "https://atlas-quick-check.it-agile.de/quick-check/" });
+    check("EN Teammodus: kein Raum", $(doc, "screen-noroom").textContent.includes("No room specified"));
+    win.close();
+    const t2 = boot(teamHtml, { languages: ["en-GB"], url: "https://atlas-quick-check.it-agile.de/quick-check/?trainer=1" });
+    check("EN Trainerseite", $(t2.doc, "screen-trainer").textContent.includes("Prepare workshop") &&
+      $(t2.doc, "trainer-room").getAttribute("placeholder") === "e.g. client-4823");
+    t2.win.close();
+    const p = boot(teamHtml, { languages: ["en-GB"], url: "https://atlas-quick-check.it-agile.de/quick-check/?room=kunde&present=1",
+      fetchImpl: () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(aggregateMitProfilen(PROFILE)) }) });
+    await new Promise(r => setTimeout(r, 40));
+    check("EN Moderation: Legende", $(p.doc, "present-legend").textContent.includes("one response") &&
+      $(p.doc, "present-legend").textContent.includes("group average"));
+    check("EN Moderation: Streifen", $(p.doc, "present-strips").textContent.includes("Avg. 3.0") &&
+      $(p.doc, "present-strips").textContent.includes("Activity Flow"));
+    check("EN Moderation: Zähler", $(p.doc, "present-count-label").textContent === "responses");
+    p.win.close();
+  }
+
+  section("[18] Keine Angabe: Aussagen dürfen offen bleiben");
+  const klick = (doc, win, name, raw) => {
+    const el = doc.querySelector('input[name="' + name + '"][value="' + raw + '"]');
+    el.click();
+    return el;
+  };
+  {
+    const { doc, win } = boot(soloHtml);
+    $(doc, "btn-start").click();
+    const el = klick(doc, win, "q0", 4);
+    check("Klick wählt aus", el.checked);
+    let draft = JSON.parse(win.localStorage.getItem("atlas-quick-check-draft-v2"));
+    check("Auswahl im Entwurf", draft.answers.q0 === 4);
+    klick(doc, win, "q0", 4);
+    check("zweiter Klick auf denselben Wert hebt die Auswahl auf", !el.checked);
+    draft = JSON.parse(win.localStorage.getItem("atlas-quick-check-draft-v2"));
+    check("aufgehobene Auswahl verschwindet aus dem Entwurf", !("q0" in draft.answers), draft.answers);
+    klick(doc, win, "q0", 2);
+    klick(doc, win, "q0", 5);
+    check("Klick auf anderen Wert wechselt nur",
+      doc.querySelector('input[name="q0"][value="5"]').checked &&
+      JSON.parse(win.localStorage.getItem("atlas-quick-check-draft-v2")).answers.q0 === 5);
+    win.close();
+  }
+  {
+    // Ganz ohne Antwort laesst sich der Fragebogen nicht abschliessen.
+    const { doc, win } = boot(soloHtml);
+    $(doc, "btn-start").click();
+    for (let i = 0; i < 5; i++) next(doc, win);
+    check("ohne jede Antwort am Ende angehalten", visible(doc, "screen-questions") && $(doc, "dim-title").textContent === DIMS[4]);
+    check("Hinweis: mindestens eine Aussage", !$(doc, "questions-error").hidden &&
+      $(doc, "questions-error").textContent.includes("mindestens eine"));
+    check("übersprungene Schritte gelten als erledigt",
+      [...doc.querySelectorAll("#steps li")].slice(0, 4).every(l => l.className === "done"));
+    klick(doc, win, "q16", 3);
+    next(doc, win);
+    check("eine Antwort genügt", visible(doc, "screen-contact"));
+    $(doc, "btn-skip").click();
+    check("Einleitung bei nur einer Dimension", $(doc, "result-lead").textContent.startsWith("In der einzigen bewerteten Dimension"),
+      $(doc, "result-lead").textContent);
+    win.close();
+  }
+  /* Teilweise beantwortet: Alignment voll (4), Teams drei von vier (2), Leadership
+   * gar nicht, Arbeitsfluss voll (3), Struktur voll (1). */
+  const teilweise = (doc, win) => {
+    $(doc, "btn-start").click();
+    answerCurrentStep(doc, win, 4); next(doc, win);
+    answerCurrentStep(doc, win, 2);
+    klick(doc, win, "q7", rohFuer(7, 2));   // q7 wieder abgewaehlt
+    next(doc, win);
+    next(doc, win);                          // Leadership ohne Angabe
+    answerCurrentStep(doc, win, 3); next(doc, win);
+    answerCurrentStep(doc, win, 1); next(doc, win);
+  };
+  {
+    const { doc, win, calls } = boot(soloWith("https://qc.example.org"));
+    teilweise(doc, win);
+    fillContact(doc, win);
+    submitContact(doc, win);
+    await new Promise(r => setTimeout(r, 40));
+    check("Ergebnis trotz offener Aussagen", visible(doc, "screen-result"));
+    const body = calls.length ? JSON.parse(calls[0].init.body) : { answers: {} };
+    const keys = Object.keys(body.answers);
+    check("übertragen werden nur beantwortete Aussagen", keys.length === 15 && !keys.includes("q7") &&
+      !["q8", "q9", "q10", "q11"].some(k => keys.includes(k)), keys);
+    check("keine Platzhalterwerte für offene Aussagen", Object.values(body.answers).every(v => Number.isInteger(v) && v >= 1 && v <= 5));
+
+    const zeile = d => [...doc.querySelectorAll("#scores-body tr")][DIMS.indexOf(d)];
+    check("Teams aus den drei beantworteten gemittelt", zeile("Teams").querySelector("td.num").textContent.trim() === "2,0 von 5");
+    check("Leadership ohne Wert", zeile("Leadership").querySelector("td.num").textContent.trim() === "–");
+    check("Leadership als keine Angabe eingeordnet", zeile("Leadership").textContent.includes("keine Angabe") &&
+      !zeile("Leadership").querySelector(".pill"));
+    check("Balken ohne Marke bei keiner Angabe", !zeile("Leadership").querySelector(".bar-mark"));
+
+    const lead = $(doc, "result-lead").textContent;
+    // (4 + 2 + 3 + 1) / 4 = 2,5 -- nur ueber die bewerteten Dimensionen
+    check("Gesamtmittel nur über bewertete Dimensionen", lead.includes("Über die 4 bewerteten Dimensionen") && lead.includes("2,5 von 5"), lead);
+    check("Hebel und Stärke ohne die offene Dimension", lead.includes("Am stärksten ist Alignment") && lead.includes("Hebel siehst du bei Struktur"), lead);
+
+    const poly = doc.querySelector("#radar polygon[stroke='#ea5d12']");
+    check("Profil hat nur vier Eckpunkte", poly && poly.getAttribute("points").trim().split(/\s+/).length === 4,
+      poly && poly.getAttribute("points"));
+    check("vier Punkte auf der Zielscheibe", doc.querySelectorAll("#radar circle[fill='#ea5d12']").length === 4);
+    const achse = [...doc.querySelectorAll("#radar text")].find(x => x.textContent.startsWith("Leadership"));
+    check("Achse ohne Wert beschriftet", achse && achse.textContent.trim() === "Leadership –", achse && achse.textContent);
+    check("Bildbeschreibung nennt keine Angabe",
+      doc.querySelector("#radar svg").getAttribute("aria-label").includes("Leadership keine Angabe"));
+    const massnahmen = [...doc.querySelectorAll("#measures .measure h3")].map(h => h.textContent.trim().split(/\s+/)[0]);
+    check("keine Ansatzpunkte für die offene Dimension", !massnahmen.includes("Leadership") &&
+      JSON.stringify(massnahmen) === JSON.stringify(["Struktur", "Teams", "Arbeitsfluss"]), massnahmen);
+    check("Hinweis, dass offene Aussagen nicht zählen", $(doc, "scores-note").textContent.includes("ohne Angabe zählen nicht mit"));
+    win.close();
+  }
+  {
+    // Fortsetzen nach uebersprungenem Schritt: beim weitesten erreichten Schritt
+    const { doc, win } = boot(soloHtml);
+    $(doc, "btn-start").click();
+    answerCurrentStep(doc, win, 4); next(doc, win);
+    next(doc, win);
+    const stored = JSON.parse(win.localStorage.getItem("atlas-quick-check-draft-v2"));
+    win.close();
+    const d2 = boot(soloHtml, { seedDraft: stored });
+    $(d2.doc, "btn-resume").click();
+    check("Fortsetzen beim weitesten erreichten Schritt", $(d2.doc, "dim-title").textContent === DIMS[2], $(d2.doc, "dim-title").textContent);
+    d2.win.close();
+  }
+  {
+    // Moderationsansicht: eine Person laesst Leadership offen, eine andere Struktur ganz.
+    const r1 = rohAntworten(PROFILE[0]); [8, 9, 10, 11].forEach(i => delete r1["q" + i]);
+    const r2 = rohAntworten(PROFILE[1]);
+    const r3 = rohAntworten(PROFILE[2]); [16, 17, 18, 19].forEach(i => delete r3["q" + i]);
+    const responses = [r1, r2, r3].map((a, i) => ({ key: "k" + i, answers: a }));
+    const questions = {};
+    for (let q = 0; q < N; q++) {
+      const vals = responses.map(x => x.answers["q" + q]).filter(v => typeof v === "number");
+      if (vals.length) questions["q" + q] = vals.reduce((s, v) => s + v, 0) / vals.length;
+    }
+    const { doc, win } = bootPresent({ room: "kunde", count: 3, questions, responses });
+    await new Promise(r => setTimeout(r, 40));
+    check("Punktwolke ohne Punkte für offene Dimensionen",
+      doc.querySelectorAll('#present-radar circle[fill^="rgba"]').length === 13,
+      doc.querySelectorAll('#present-radar circle[fill^="rgba"]').length);
+    check("Streifen ohne Punkte für offene Dimensionen",
+      doc.querySelectorAll('#present-strips circle').length === 13, doc.querySelectorAll('#present-strips circle').length);
+    // Leadership: nur 3 und 5 -> Mittel 4,0
+    check("Gruppenmittel nur aus vorhandenen Angaben", $(doc, "present-strips").textContent.includes("Mittel 4,0"));
+    win.close();
+  }
+  {
+    // Eine Dimension, die niemand in der Gruppe bewertet hat, erscheint nicht.
+    const responses = [0, 1].map(i => { const a = rohAntworten(PROFILE[i]); [8, 9, 10, 11].forEach(k => delete a["q" + k]); return { key: "k" + i, answers: a }; });
+    const questions = {};
+    for (let q = 0; q < N; q++) {
+      const vals = responses.map(x => x.answers["q" + q]).filter(v => typeof v === "number");
+      if (vals.length) questions["q" + q] = vals.reduce((s, v) => s + v, 0) / vals.length;
+    }
+    const { doc, win } = bootPresent({ room: "kunde", count: 2, questions, responses });
+    await new Promise(r => setTimeout(r, 40));
+    check("kein Mittelwert-Ring für eine von niemandem bewertete Dimension",
+      doc.querySelectorAll('#present-radar circle[fill="none"]').length === 4);
+    const zeile = [...doc.querySelectorAll("#present-scores tr")][DIMS.indexOf("Leadership")];
+    check("Tabelle zeigt keine Angabe", zeile.textContent.includes("keine Angabe"));
+    win.close();
   }
 
   console.log("\n=======================================");
